@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>เข้าสู่ระบบ | Assignment Reminder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+<div class="login-page">
+
+  <div class="login-info">
+    <h1>ยินดีต้อนรับกลับมา 👋</h1>
+    <p>
+      เข้าสู่ระบบเพื่อจัดการงาน<br>
+      และรับการแจ้งเตือนก่อนเดดไลน์
+    </p>
+  </div>
+
+  <div class="login-card">
+    <h2>เข้าสู่ระบบ</h2>
+
+    <form id="loginForm">
+      <!-- ใช้เป็น EMAIL -->
+      <input type="email" id="email" placeholder="อีเมล" required>
+      <input type="password" id="password" placeholder="รหัสผ่าน" required>
+      <button type="submit">เข้าสู่ระบบ</button>
+    </form>
+
+    <p class="register-link">
+      ยังไม่มีบัญชี? <a href="index.html">สมัครสมาชิก</a>
+    </p>
+  </div>
+
+</div>
+
+
+
+
+
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+<script>
+  // 🔹 Firebase config
+  const firebaseConfig = {
+     apiKey: "AIzaSyA0zWQ5f9M7kW9hGyAJ9dtzcPikUQXIPZE",
+    authDomain: "assignment-reminder-b1027.firebaseapp.com",
+    projectId: "assignment-reminder-b1027",
+    storageBucket: "assignment-reminder-b1027.firebasestorage.app",
+    messagingSenderId: "334199580488",
+    appId: "1:334199580488:web:35a4570922ad7ea0c3b57d",
+    measurementId: "G-GK4ZQ9VPS9"
+};
+
+  // 🔹 init Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+</script>
+
+<script>
+  const loginForm = document.getElementById("loginForm");
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // 🔴 เพิ่ม: ช่องนี้ต้องเป็น EMAIL เท่านั้น
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    if (!email || !password) {
+      alert("กรุณากรอกอีเมลและรหัสผ่าน");
+      return;
+    }
+
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+
+      alert("เข้าสู่ระบบสำเร็จ");
+      window.location.href = "dashboard2.html"; // เปลี่ยนตามหน้าหลักของคุณ
+
+    } catch (error) {
+      console.error(error);
+
+      switch (error.code) {
+        case "auth/user-not-found":
+          alert("ไม่พบบัญชีผู้ใช้");
+          break;
+        case "auth/wrong-password":
+          alert("รหัสผ่านไม่ถูกต้อง");
+          break;
+        case "auth/invalid-email":
+          alert("รูปแบบอีเมลไม่ถูกต้อง");
+          break;
+        default:
+          alert(error.message);
+      }
+    }
+  });
+</script>
