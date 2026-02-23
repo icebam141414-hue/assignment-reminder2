@@ -191,8 +191,9 @@
       </div>
 
       <!-- ปุ่ม LINE อยู่ขวา -->
-      <a href="https://lin.ee/HjzW0zt" target="_blank" class="line-btn">
-        💚 เพิ่มเพื่อน LINE
+      <a href="https://line.me/R/ti/p/@898vvvdb">
+  เพิ่ม LINE เพื่อรับแจ้งเตือน
+</a>
       </a>
     </div>
   </section>
@@ -225,6 +226,30 @@
   </footer>
 
 
+  <div id="securityCookie" style="
+position: fixed;
+bottom: 0;
+left: 0;
+width: 100%;
+background: #111;
+color: white;
+padding: 12px;
+text-align: center;
+z-index: 9999;">
+🔒 เว็บไซต์นี้ใช้ Firebase Authentication และ Security Cookie เพื่อความปลอดภัย
+<button onclick="acceptCookie()" style="margin-left:10px;">ตกลง</button>
+</div>
+
+<script>
+function acceptCookie(){
+  localStorage.setItem("cookieAccepted","yes");
+  document.getElementById("securityCookie").style.display="none";
+}
+
+if(localStorage.getItem("cookieAccepted")){
+  document.getElementById("securityCookie").style.display="none";
+}
+</script>
 
 
   
@@ -302,11 +327,45 @@ apiKey: "AIzaSyA0zWQ5f9M7kW9hGyAJ9dtzcPikUQXIPZE",
       await auth.signOut();
       window.location.href = "login2.html";
     });
+
+
+
+// ตั้งเวลา timeout 30 นาที
+let timeout;
+
+function resetTimer() {
+  clearTimeout(timeout);
+  timeout = setTimeout(logoutUser, 30 * 60 * 1000);
+}
+
+function logoutUser() {
+  auth.signOut();
+  alert("เซสชันหมดเวลาเพื่อความปลอดภัย กรุณาเข้าสู่ระบบใหม่");
+  window.location.href = "login2.html";
+}
+
+// เริ่มจับเวลาเมื่อโหลดหน้า
+window.onload = resetTimer;
+
+// ตรวจจับการใช้งาน
+document.onmousemove = resetTimer;
+document.onkeypress = resetTimer;
+document.onclick = resetTimer;
+document.onscroll = resetTimer;
+
+
+
+
+
+
 </script>
 
-</body>
-</html>
+
+
+
+
 
 
 </body>
 </html>
+

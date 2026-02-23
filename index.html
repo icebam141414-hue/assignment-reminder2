@@ -77,6 +77,19 @@ registerForm.addEventListener("submit", async (e) => {
     return;
   }
 
+
+
+
+
+  // ตรวจรูปแบบอีเมลนักศึกษา KMUTNB
+const studentEmailPattern = /^s\d+@email\.kmutnb\.ac\.th$/;
+
+if (!studentEmailPattern.test(email)) {
+  alert("กรุณาใช้อีเมลนักศึกษา KMUTNB เท่านั้น เช่น sXXXXXXXX@email.kmutnb.ac.th");
+  return;
+}
+
+
   try {
     // ⭐⭐ สำคัญมาก (แก้ปัญหาไม่ redirect)
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
@@ -103,7 +116,7 @@ registerForm.addEventListener("submit", async (e) => {
 
 
  alert("สมัครสมาชิกสำเร็จ");
-    window.location.href = "/assignment-reminder/login2.html";
+    window.location.href = "login2.html";
 
 
 
