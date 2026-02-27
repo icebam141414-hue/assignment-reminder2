@@ -1,11 +1,22 @@
 const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
+const admin = require("firebase-admin");
+
+// 🔥 ใช้ Environment Variable สำหรับ Firebase
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+const db = admin.firestore();
 
 const app = express();
 app.use(bodyParser.json());
 
-const CHANNEL_ACCESS_TOKEN = "w6bwmA9WjHhkTOEIm0z7GhzTKBLEGE68Ros58/BABx2wy9Fr2GloQjoK97+bhLGcqGchunW+qbglxz9AkF9jxZMdjSLD4FeEnLy8NO7mPiJTUoyhoBkK7n9upzvQS5HJvugcn8OIRe8/wrbjbiwsLAdB04t89/1O/w1cDnyilFU=";
+// 🔥 ใช้ Environment Variable สำหรับ LINE
+const CHANNEL_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN;
 
 app.post("/webhook", async (req, res) => {
   const events = req.body.events;
@@ -16,6 +27,13 @@ app.post("/webhook", async (req, res) => {
 
       console.log("User ID:", userId);
 
+      // ✅ บันทึก user ลง Firestore
+      await db.collection("users").doc(userId).set({
+        userId: userId,
+        createdAt: new Date()
+      });
+
+      // ✅ ส่งข้อความกลับ
       await axios.post(
         "https://api.line.me/v2/bot/message/push",
         {
@@ -40,6 +58,9 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+// 🔥 สำคัญสำหรับ Render
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
