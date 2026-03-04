@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>สมัครสมาชิก</title>
+  <link rel="stylesheet" href="style2.css">
+</head>
+<body>
+
+<header class="main-header">
+  <div class="logo">assignment-reminder</div>
+</header>
+
+<section class="hero">
+  <div class="hero-text">
+    <h1>ระบบแจ้งเตือนการส่งงาน<br>assignment-reminder</h1>
+    <p>จัดการงาน | แจ้งเตือน | ไม่พลาดเดดไลน์</p>
+  </div>
+
+  <div class="register-box">
+    <h2>สมัครสมาชิก</h2>
+
+    <form id="registerForm">
+      <input id="username" type="text" placeholder="ชื่อผู้ใช้">
+      <input id="email" type="email" placeholder="อีเมล">
+      <input id="password" type="password" placeholder="รหัสผ่าน">
+      <button type="submit">สมัครสมาชิก</button>
+    </form>
+
+    <small>มีบัญชีแล้ว? <a href="login2.html">เข้าสู่ระบบ</a></small>
+
+    <footer>
+      © 2026 Assignment Reminder
+    </footer>
+  </div>
+</section>
+
+<!-- ================= Firebase SDK (v8) ================= -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+<script>
+const firebaseConfig = {
+   apiKey: "AIzaSyA0zWQ5f9M7kW9hGyAJ9dtzcPikUQXIPZE",
+    authDomain: "assignment-reminder-b1027.firebaseapp.com",
+    projectId: "assignment-reminder-b1027",
+    storageBucket: "assignment-reminder-b1027.firebasestorage.app",
+    messagingSenderId: "334199580488",
+    appId: "1:334199580488:web:35a4570922ad7ea0c3b57d",
+    measurementId: "G-GK4ZQ9VPS9"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+</script>
+
+<script>
+const registerForm = document.getElementById("registerForm");
+
+registerForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const username = document.getElementById("username").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+
+  if (!username || !email || !password) {
+    alert("กรุณากรอกข้อมูลให้ครบ");
+    return;
+  }
+
+  if (password.length < 6) {
+    alert("รหัสผ่านต้องอย่างน้อย 6 ตัวอักษร");
+    return;
+  }
+
+
+
+
+
+  // ตรวจรูปแบบอีเมลนักศึกษา KMUTNB
+const studentEmailPattern = /^s\d+@email\.kmutnb\.ac\.th$/;
+
+if (!studentEmailPattern.test(email)) {
+  alert("กรุณาใช้อีเมลนักศึกษา KMUTNB เท่านั้น เช่น sXXXXXXXX@email.kmutnb.ac.th");
+  return;
+}
+
+
+  try {
+    // ⭐⭐ สำคัญมาก (แก้ปัญหาไม่ redirect)
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+    // 1️⃣ สมัครสมาชิก
+    const userCredential =
+      await auth.createUserWithEmailAndPassword(email, password);
+
+    const user = userCredential.user;
+
+    // 2️⃣ บันทึกชื่อผู้ใช้ใน Auth
+    await user.updateProfile({
+      displayName: username
+    });
+
+    // 3️⃣ บันทึกลง Firestore
+    await db.collection("users").doc(user.uid).set({
+      username: username,
+      email: email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    
+
+
+ alert("สมัครสมาชิกสำเร็จ");
+    window.location.href = "login2.html";
+
+
+
+
+  } catch (error) {
+    console.error(error);
+
+    switch (error.code) {
+      case "auth/email-already-in-use":
+        alert("อีเมลนี้ถูกใช้งานแล้ว");
+        break;
+      case "auth/invalid-email":
+        alert("รูปแบบอีเมลไม่ถูกต้อง");
+        break;
+      case "auth/weak-password":
+        alert("รหัสผ่านอ่อนเกินไป");
+        break;
+      default:
+        alert(error.message);
+    }
+  }
+});
+</script>
+
+</body>
+</html>

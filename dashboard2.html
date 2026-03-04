@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Home | Assignment Reminder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="dashboard.css">
+  <style>
+    * { box-sizing: border-box; font-family: "Segoe UI", sans-serif; }
+    body { margin: 0; background: #f3f4f6; color: #222; }
+
+    header {
+      background: #2f2f2f;
+      color: #fff;
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 { font-size: 22px; margin: 0; }
+
+    .hero {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: #fff;
+      padding: 60px 40px;
+    }
+
+    .hero-content {
+      max-width: 1200px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .hero h2 { font-size: 36px; margin: 0 0 10px; }
+    .hero p { font-size: 18px; opacity: 0.9; margin: 0; }
+
+    .dashboard {
+      max-width: 1200px;
+      margin: 60px auto;
+      padding: 0 40px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 30px;
+      text-decoration: none;
+      color: #222;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      transition: 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+
+    .icon { font-size: 42px; }
+    .card h3 { font-size: 20px; margin: 0; }
+    .card p { font-size: 14px; opacity: 0.7; margin: 0; }
+
+    footer {
+      text-align: center;
+      padding: 30px;
+      font-size: 14px;
+      opacity: 0.6;
+    }
+
+    @media (max-width: 768px) {
+      .hero-content { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>หน้าหลัก</h1>
+  <div class="user-menu">
+    <span id="userBtn">👤 ผู้ใช้งาน ▾</span>
+
+    <div class="user-dropdown" id="userDropdown">
+      <p><strong>อีเมล:</strong><br>
+        <span id="userEmail">-</span>
+      </p>
+
+      <p><strong>ชื่อผู้ใช้:</strong><br>
+        <span id="userName">-</span>
+      </p>
+
+      <button id="changePasswordBtn">เปลี่ยนรหัสผ่าน</button>
+      <button id="logoutBtn" style="margin-top:6px;">ออกจากระบบ</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-content">
+    <div>
+      <h2>assignment-reminder</h2>
+      <p>จัดการงาน แจ้งเตือนอัตโนมัติ ไม่พลาดทุกเดดไลน์</p>
+    </div>
+
+    <a href="https://line.me/R/ti/p/@898vvvdb">
+      เพิ่ม LINE เพื่อรับแจ้งเตือน
+    </a>
+  </div>
+</section>
+
+<section class="dashboard">
+  <a href="add-task2.html" class="card">
+    <div class="icon">➕</div>
+    <h3>เพิ่มงานใหม่</h3>
+    <p>เพิ่มงานและกำหนดวันส่ง</p>
+  </a>
+
+  <a href="tasks2.html" class="card">
+    <div class="icon">📋</div>
+    <h3>รายการงาน</h3>
+    <p>ดู แก้ไข และลบงาน</p>
+  </a>
+
+  <a href="summary2.html" class="card">
+    <div class="icon">📊</div>
+    <h3>สรุปงานทั้งหมด</h3>
+    <p>ดูภาพรวมสถานะงานทั้งหมด</p>
+  </a>
+</section>
+
+<footer>
+  © 2026 Assignment Reminder
+</footer>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA0zWQ5f9M7kW9hGyAJ9dtzcPikUQXIPZE",
+  authDomain: "assignment-reminder-b1027.firebaseapp.com",
+  projectId: "assignment-reminder-b1027",
+  storageBucket: "assignment-reminder-b1027.firebasestorage.app",
+  messagingSenderId: "334199580488",
+  appId: "1:334199580488:web:35a4570922ad7ea0c3b57d"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+/* ✅ แก้ตรงนี้: เอา redirect ออก */
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    document.getElementById("userEmail").textContent = user.email || "-";
+    document.getElementById("userName").textContent =
+      user.displayName || "ยังไม่ได้ตั้งชื่อ";
+  }
+});
+
+/* dropdown */
+const userBtn = document.getElementById("userBtn");
+const userDropdown = document.getElementById("userDropdown");
+
+userBtn.addEventListener("click", () => {
+  userDropdown.style.display =
+    userDropdown.style.display === "block" ? "none" : "block";
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".user-menu")) {
+    userDropdown.style.display = "none";
+  }
+});
+
+/* logout */
+document.getElementById("logoutBtn")
+  .addEventListener("click", async () => {
+    await auth.signOut();
+    window.location.href = "login2.html";
+  });
+
+/* timeout 30 นาที */
+let timeout;
+
+function resetTimer() {
+  clearTimeout(timeout);
+  timeout = setTimeout(() => {
+    auth.signOut();
+    alert("เซสชันหมดเวลา กรุณาเข้าสู่ระบบใหม่");
+    window.location.href = "login2.html";
+  }, 30 * 60 * 1000);
+}
+
+window.onload = resetTimer;
+document.onmousemove = resetTimer;
+document.onkeypress = resetTimer;
+document.onclick = resetTimer;
+document.onscroll = resetTimer;
+
+</script>
+
+</body>
+</html>

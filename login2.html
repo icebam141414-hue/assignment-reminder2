@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>เข้าสู่ระบบ | Assignment Reminder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+<div class="login-page">
+
+  <div class="login-info">
+    <h1>เข้าสู่ระบบด้วย LINE 👋</h1>
+    <p>
+      เชื่อมต่อบัญชี LINE เพื่อรับการแจ้งเตือนงาน<br>
+      และจัดการเดดไลน์ของคุณ
+    </p>
+  </div>
+
+  <div class="login-card">
+    <h2>Login</h2>
+
+    <button id="lineLoginBtn" style="
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:8px;
+      background:#06C755;
+      color:white;
+      font-size:16px;
+      cursor:pointer;">
+      เข้าสู่ระบบด้วย LINE
+    </button>
+
+  </div>
+
+</div>
+
+<script>
+  const BASE_URL = "https://line-bot-2ob3.onrender.com";
+  const LINE_LOGIN_CHANNEL_ID = "2009128895";
+
+  document.getElementById("lineLoginBtn").addEventListener("click", () => {
+
+    const loginUrl =
+      `https://access.line.me/oauth2/v2.1/authorize` +
+      `?response_type=code` +
+      `&client_id=${LINE_LOGIN_CHANNEL_ID}` +
+      `&redirect_uri=${BASE_URL}/callback` +
+      `&state=12345` +
+      `&scope=profile%20openid`;
+
+    window.location.href = loginUrl;
+  });
+</script>
+
+</body>
+</html>

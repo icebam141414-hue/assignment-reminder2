@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>สรุปงานทั้งหมด | Assignment Reminder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #f3f4f6;
+      color: #111;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      background: #111827;
+      color: #fff;
+      padding: 24px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    header a {
+      color: #c7d2fe;
+      text-decoration: none;
+      font-size: 15px;
+    }
+
+    /* ===== CONTAINER ===== */
+    .container {
+      max-width: 1200px;
+      margin: 32px auto;
+      padding: 0 24px;
+    }
+
+    /* ===== SUMMARY CARDS ===== */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .summary-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+    }
+
+    .summary-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #6b7280;
+    }
+
+    .summary-card p {
+      margin: 0;
+      font-size: 34px;
+      font-weight: 700;
+    }
+
+    .done { color: #22c55e; }
+    .late { color: #ef4444; }
+    .pending { color: #f59e0b; }
+
+    /* ===== MAIN GRID ===== */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+
+    /* ===== CHART ===== */
+    .chart-card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+      height: 360px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chart-card canvas {
+      max-height: 280px !important;
+    }
+
+    /* ===== TASK LIST ===== */
+    .task-section {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    .task-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .task-card h4 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+
+    .task-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+
+    .task-item:last-child {
+      border-bottom: none;
+    }
+
+    /* ===== MOBILE ===== */
+    @media (max-width: 900px) {
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-card {
+        height: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>📊 สรุปงานทั้งหมด</h1>
+  <a href="dashboard2.html">← กลับหน้าหลัก</a>
+</header>
+
+<div class="container">
+
+  <!-- SUMMARY -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <h3>งานเสร็จตรงเวลา</h3>
+      <p class="done" id="countDone">0</p>
+    </div>
+    <div class="summary-card">
+      <h3>ส่งช้า</h3>
+      <p class="late" id="countLate">0</p>
+    </div>
+    <div class="summary-card">
+      <h3>ยังไม่ได้ส่ง</h3>
+      <p class="pending" id="countPending">0</p>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-grid">
+
+    <!-- CHART -->
+    <div class="chart-card">
+      <canvas id="taskChart"></canvas>
+    </div>
+
+    <!-- TASK LIST -->
+    <div class="task-section">
+      <div class="task-card">
+        <h4>✅ เสร็จตรงเวลา</h4>
+        <div id="doneList"></div>
+      </div>
+
+      <div class="task-card">
+        <h4>⏰ ส่งช้า</h4>
+        <div id="lateList"></div>
+      </div>
+
+      <div class="task-card">
+        <h4>❌ ยังไม่ได้ส่ง</h4>
+        <div id="pendingList"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+
+  let done = 0, late = 0, pending = 0;
+
+  const doneList = document.getElementById("doneList");
+  const lateList = document.getElementById("lateList");
+  const pendingList = document.getElementById("pendingList");
+
+  tasks.forEach(t => {
+    const now = new Date();
+    const due = new Date(t.time);
+
+    const item = document.createElement("div");
+    item.className = "task-item";
+    item.innerText = `${t.subject} - ${t.task}`;
+
+    if (t.completed === true && due >= now) {
+      done++;
+      doneList.appendChild(item);
+    } else if (t.completed === true && due < now) {
+      late++;
+      lateList.appendChild(item);
+    } else {
+      pending++;
+      pendingList.appendChild(item);
+    }
+  });
+
+  document.getElementById("countDone").innerText = done;
+  document.getElementById("countLate").innerText = late;
+  document.getElementById("countPending").innerText = pending;
+
+  new Chart(document.getElementById("taskChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["เสร็จตรงเวลา", "ส่งช้า", "ยังไม่ได้ส่ง"],
+      datasets: [{
+        data: [done, late, pending],
+        backgroundColor: ["#22c55e", "#ef4444", "#f59e0b"]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "bottom"
+        }
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
