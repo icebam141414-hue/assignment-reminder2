@@ -28,26 +28,25 @@
       <button type="submit">เข้าสู่ระบบ</button>
     </form>
 
-    <!-- 🔥 เพิ่มเส้นคั่น -->
+    <!-- 🔥 เส้นคั่น -->
     <div style="text-align:center; margin:15px 0; color:#999;">
       หรือ
     </div>
 
-    <a href="/login">
-  <button type="button" style="
-    width:100%;
-    padding:12px;
-    border:none;
-    border-radius:8px;
-    background:#06C755;
-    color:white;
-    font-size:16px;
-    cursor:pointer;">
-    เข้าสู่ระบบด้วย LINE
-  </button>
-</a>
-
-
+    <!-- ✅ ปุ่ม LOGIN ด้วย LINE (แก้แล้ว) -->
+    <a href="https://line-bot-2ob3.onrender.com/login">
+      <button type="button" style="
+        width:100%;
+        padding:12px;
+        border:none;
+        border-radius:8px;
+        background:#06C755;
+        color:white;
+        font-size:16px;
+        cursor:pointer;">
+        เข้าสู่ระบบด้วย LINE
+      </button>
+    </a>
 
     <p class="register-link">
       ยังไม่มีบัญชี? <a href="index.html">สมัครสมาชิก</a>
@@ -56,18 +55,13 @@
 
 </div>
 
-
-
-
-
-
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
 <script>
   const firebaseConfig = {
-     apiKey: "AIzaSyA0zWQ5f9M7kW9hGyAJ9dtzcPikUQXIPZE",
+    apiKey: "AIzaSyA0zWQ5f9M7kW9hGyAJ9dtzcPikUQXIPZE",
     authDomain: "assignment-reminder-b1027.firebaseapp.com",
     projectId: "assignment-reminder-b1027",
     storageBucket: "assignment-reminder-b1027.firebasestorage.app",
@@ -96,10 +90,8 @@
 
     try {
       await auth.signInWithEmailAndPassword(email, password);
-
       alert("เข้าสู่ระบบสำเร็จ");
       window.location.href = "dashboard2.html";
-
     } catch (error) {
       console.error(error);
 
