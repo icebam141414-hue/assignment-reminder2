@@ -2,6 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
 const admin = require("firebase-admin");
+const cron = require("node-cron"); // ✅ เพิ่ม cron
 
 // 🔥 ใช้ Environment Variable สำหรับ Firebase
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -57,6 +58,28 @@ app.post("/webhook", async (req, res) => {
 
   res.sendStatus(200);
 });
+
+
+// =============================
+// 🔔 CRON JOB (เพิ่มส่วนนี้)
+// =============================
+
+// ทดสอบรันทุก 1 นาที
+cron.schedule("* * * * *", async () => {
+  console.log("Cron is running every minute");
+
+  try {
+    const usersSnapshot = await db.collection("users").get();
+
+    usersSnapshot.forEach((doc) => {
+      console.log("Found user:", doc.id);
+    });
+
+  } catch (error) {
+    console.error("Cron error:", error);
+  }
+});
+
 
 // 🔥 สำคัญสำหรับ Render
 const PORT = process.env.PORT || 3000;
