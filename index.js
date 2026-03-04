@@ -64,47 +64,60 @@ app.post("/webhook", async (req, res) => {
 // =============================
 // 🔔 CRON JOB (แก้ไขส่วนนี้)
 // =============================
-
-// ทดสอบรันทุก 1 นาที
 cron.schedule("* * * * *", async () => {
   console.log("Cron is running every minute");
 
   try {
-    const usersSnapshot = await db.collection("users").get();
+    const now = new Date();
+    const tasksSnapshot = await db.collection("tasks").get();
 
-    for (const doc of usersSnapshot.docs) {
-      const userId = doc.id;
-      console.log("Sending reminder to:", userId);
+    for (const doc of tasksSnapshot.docs) {
+      const data = doc.data();
 
-      await axios.post(
-        "https://api.line.me/v2/bot/message/push",
-        {
-          to: userId,
-          messages: [
+      if (!data.dueDate || data.notified) continue;
+
+      const dueDate = new Date(data.dueDate);
+
+      if (now >= dueDate) {
+
+        console.log("Task expired:", data.title);
+
+        const usersSnapshot = await db.collection("users").get();
+
+        for (const userDoc of usersSnapshot.docs) {
+          const userId = userDoc.id;
+
+          await axios.post(
+            "https://api.line.me/v2/bot/message/push",
             {
-              type: "text",
-              text: "🔔 แจ้งเตือนทดสอบจากระบบ Cron ทำงานแล้ว!"
+              to: userId,
+              messages: [
+                {
+                  type: "text",
+                  text: `🔔 งาน "${data.title}" วิชา ${data.subject} ถึงกำหนดส่งแล้ว!`
+                }
+              ]
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                "Content-Type": "application/json"
+              }
             }
-          ]
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
+          );
 
-      console.log("Sent reminder to:", userId);
+          console.log("Sent task reminder to:", userId);
+        }
+
+        // ✅ บันทึกว่าแจ้งเตือนแล้ว
+        await doc.ref.update({ notified: true });
+      }
     }
 
   } catch (error) {
     console.error("Cron error:", error.response?.data || error.message);
   }
 });
-
-
-
 
 
 
