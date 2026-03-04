@@ -29,8 +29,8 @@ app.use(session({
   saveUninitialized: false,
   proxy: true,
   cookie: {
-    secure: false,   // 👈 เปลี่ยนเป็น false ก่อน
-    sameSite: "lax"  // 👈 เปลี่ยนเป็น lax
+    secure: true,      // 🔥 เปลี่ยนเป็น true
+    sameSite: "none"   // 🔥 เปลี่ยนเป็น none
   }
 }));
 
