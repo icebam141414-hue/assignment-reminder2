@@ -27,10 +27,10 @@ app.use(session({
   secret: process.env.SESSION_SECRET || "mysecret",
   resave: false,
   saveUninitialized: false,
-  proxy: true,   // 👈 สำคัญมาก
+  proxy: true,
   cookie: {
-    secure: true,
-    sameSite: "none"
+    secure: false,   // 👈 เปลี่ยนเป็น false ก่อน
+    sameSite: "lax"  // 👈 เปลี่ยนเป็น lax
   }
 }));
 
