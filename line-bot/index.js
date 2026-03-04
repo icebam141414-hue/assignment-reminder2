@@ -4,6 +4,34 @@ const bodyParser = require("body-parser");
 const admin = require("firebase-admin");
 const cron = require("node-cron");
 const session = require("express-session");
+const path = require("path");
+
+const app = express();
+app.set("trust proxy", 1);
+
+// =====================================
+// 🔥 Static Files (แก้ให้ถูกต้อง)
+// =====================================
+app.use(express.static(__dirname));
+
+// =====================================
+// 🔥 Body Parser
+// =====================================
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// =====================================
+// 🔥 Session (สำคัญมากสำหรับ Render HTTPS)
+// =====================================
+app.use(session({
+  secret: process.env.SESSION_SECRET || "mysecret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: true,        // ต้อง true บน Render
+    sameSite: "none"     // ต้อง none สำหรับ LINE redirect
+  }
+}));
 
 // =====================================
 // 🔥 Firebase
@@ -20,25 +48,6 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
-
-const app = express();
-app.set("trust proxy", 1);
-
-const path = require("path");
-app.use(express.static(path.join(__dirname, "..")));
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// ✅ Session ใช้ได้บน Render
-app.use(session({
-  secret: process.env.SESSION_SECRET || "mysecret",
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false
-  }
-}));
 
 // =====================================
 // 🔥 ENV CHECK
@@ -95,6 +104,7 @@ app.get("/login", (req, res) => {
 // =====================================
 app.get("/callback", async (req, res) => {
   try {
+
     const code = req.query.code;
     if (!code) return res.send("No code received");
 
@@ -121,6 +131,7 @@ app.get("/callback", async (req, res) => {
 
     const userId = profileResponse.data.userId;
 
+    // 🔥 บันทึก session
     req.session.userId = userId;
 
     await db.collection("users").doc(userId).set({
@@ -128,11 +139,12 @@ app.get("/callback", async (req, res) => {
       createdAt: new Date()
     }, { merge: true });
 
-    res.redirect("/dashboard2.html");
+    // 🔥 Redirect แบบปลอดภัย
+    return res.redirect("/dashboard2.html");
 
   } catch (error) {
     console.error("Login error:", error.response?.data || error.message);
-    res.status(500).send("Login error");
+    return res.status(500).send("Login error");
   }
 });
 
@@ -167,6 +179,7 @@ app.post("/create-task", async (req, res) => {
 // 🔔 Webhook
 // =====================================
 app.post("/webhook", async (req, res) => {
+
   const events = req.body.events || [];
 
   for (let event of events) {
@@ -210,6 +223,7 @@ cron.schedule("* * * * *", async () => {
   const tasksSnapshot = await db.collection("tasks").get();
 
   for (const doc of tasksSnapshot.docs) {
+
     const data = doc.data();
 
     if (!data.dueDate || data.notified) continue;
@@ -238,7 +252,6 @@ cron.schedule("* * * * *", async () => {
       await doc.ref.update({ notified: true });
     }
   }
-
 });
 
 // =====================================
