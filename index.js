@@ -20,7 +20,7 @@ app.use(bodyParser.json());
 const CHANNEL_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN;
 
 app.post("/webhook", async (req, res) => {
-  const events = req.body.events;
+  const events = req.body.events || [];
 
   for (let event of events) {
     if (event.type === "follow") {
@@ -60,8 +60,9 @@ app.post("/webhook", async (req, res) => {
 });
 
 
+
 // =============================
-// 🔔 CRON JOB (เพิ่มส่วนนี้)
+// 🔔 CRON JOB (แก้ไขส่วนนี้)
 // =============================
 
 // ทดสอบรันทุก 1 นาที
@@ -71,14 +72,45 @@ cron.schedule("* * * * *", async () => {
   try {
     const usersSnapshot = await db.collection("users").get();
 
-    usersSnapshot.forEach((doc) => {
-      console.log("Found user:", doc.id);
-    });
+    for (const doc of usersSnapshot.docs) {
+      const userId = doc.id;
+      console.log("Sending reminder to:", userId);
+
+      await axios.post(
+        "https://api.line.me/v2/bot/message/push",
+        {
+          to: userId,
+          messages: [
+            {
+              type: "text",
+              text: "🔔 แจ้งเตือนทดสอบจากระบบ Cron ทำงานแล้ว!"
+            }
+          ]
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      console.log("Sent reminder to:", userId);
+    }
 
   } catch (error) {
-    console.error("Cron error:", error);
+    console.error("Cron error:", error.response?.data || error.message);
   }
 });
+
+
+
+
+
+
+
+
+
 
 
 // 🔥 สำคัญสำหรับ Render
