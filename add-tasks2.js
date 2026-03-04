@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // ✅ แก้ตรงนี้ให้ตรงกับ server
-    fetch("/add-tasks", {
+    fetch("/add-tasks2", {
       method: "POST",
       credentials: "include",
       headers: {
