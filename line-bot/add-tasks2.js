@@ -26,11 +26,13 @@ document.addEventListener("DOMContentLoaded", () => {
       dueDate: time
     };
 
-    fetch("http://localhost:3000/add-task", {
+    // ✅ แก้ตรงนี้: ใช้ path เดียวกับ server และไม่ใช้ localhost
+    fetch("/create-task", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
+      credentials: "include", // ✅ สำคัญมากสำหรับ session
       body: JSON.stringify(newTask)
     })
     .then(res => res.text())
