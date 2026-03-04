@@ -27,9 +27,10 @@ app.use(session({
   secret: process.env.SESSION_SECRET || "mysecret",
   resave: false,
   saveUninitialized: false,
+  proxy: true,   // 👈 สำคัญมาก
   cookie: {
-    secure: true,        // ต้อง true บน Render
-    sameSite: "none"     // ต้อง none สำหรับ LINE redirect
+    secure: true,
+    sameSite: "none"
   }
 }));
 
