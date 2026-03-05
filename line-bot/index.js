@@ -1,4 +1,3 @@
-
 const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
@@ -11,7 +10,7 @@ const app = express();
 app.set("trust proxy", 1);
 
 // =====================================
-// 🔥 Static Files (แก้ให้ถูกต้อง)
+// 🔥 Static Files
 // =====================================
 app.use(express.static(__dirname));
 
@@ -22,7 +21,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // =====================================
-// 🔥 Session (สำคัญมากสำหรับ Render HTTPS)
+// 🔥 Session
 // =====================================
 app.use(session({
   secret: process.env.SESSION_SECRET || "mysecret",
@@ -34,7 +33,6 @@ app.use(session({
     sameSite: "lax"
   }
 }));
- 
 
 // =====================================
 // 🔥 Firebase
@@ -101,6 +99,7 @@ app.get("/login", (req, res) => {
     </a>
   `);
 });
+
 // =====================================
 // 🔐 Callback
 // =====================================
@@ -178,11 +177,13 @@ app.post("/create-task", async (req, res) => {
 // 🔔 Webhook
 // =====================================
 app.post("/webhook", async (req, res) => {
+
   const events = req.body.events || [];
 
   for (let event of events) {
 
     if (event.type === "follow") {
+
       const userId = event.source.userId;
 
       await db.collection("users").doc(userId).set({
@@ -190,64 +191,15 @@ app.post("/webhook", async (req, res) => {
         createdAt: new Date()
       }, { merge: true });
 
-      await axios.post(
-        "https://api.line.me/v2/bot/message/push",
-        {
-          to: userId,
-          messages: [{
-            type: "text",
-            text: "เชื่อมต่อระบบแจ้งเตือนงานเรียบร้อยแล้ว"
-          }]
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-    }
-  }
-
-  res.sendStatus(200);
-});
-
-// =====================================
-// ⏰ Cron แจ้งเตือนทุก 1 นาที
-// =====================================
-
-  cron.schedule("* * * * *", async () => {
-
-  console.log("กำลังตรวจงานใน Firebase...");
-
-  const now = new Date();
-
-  const tasksSnapshot = await db.collection("tasks").get();
-
-  const usersSnapshot = await db.collection("users").get();
-
-
-  for (const doc of tasksSnapshot.docs) {
-
-    const data = doc.data();
-
-    if (!data.dueDate || data.notified) continue;
-
-    if (now >= new Date(data.dueDate)) {
-
-      for (const userDoc of usersSnapshot.docs) {
-
-        const user = userDoc.data();
-
-        if (!user.userId) continue;
+      try {
 
         await axios.post(
           "https://api.line.me/v2/bot/message/push",
           {
-            to: user.userId,
+            to: userId,
             messages: [{
               type: "text",
-              text: `🔔 งาน "${data.title}" วิชา ${data.subject} ถึงกำหนดส่งแล้ว!`
+              text: "เชื่อมต่อระบบแจ้งเตือนงานเรียบร้อยแล้ว"
             }]
           },
           {
@@ -258,14 +210,89 @@ app.post("/webhook", async (req, res) => {
           }
         );
 
-        console.log("ส่งแจ้งเตือนให้:", user.userId);
+      } catch (err) {
+        console.log("LINE push error:", err.response?.data || err.message);
       }
 
-      await doc.ref.update({ notified: true });
     }
   }
 
+  res.sendStatus(200);
 });
+
+// =====================================
+// ⏰ Cron แจ้งเตือนทุก 1 นาที
+// =====================================
+cron.schedule("* * * * *", async () => {
+
+  try {
+
+    console.log("กำลังตรวจงานใน Firebase...");
+
+    const now = new Date();
+
+    const tasksSnapshot = await db.collection("tasks").get();
+    const usersSnapshot = await db.collection("users").get();
+
+    for (const doc of tasksSnapshot.docs) {
+
+      const data = doc.data();
+
+      if (!data.dueDate || data.notified) continue;
+
+      const dueDate = new Date(data.dueDate);
+
+      if (now >= dueDate) {
+
+        for (const userDoc of usersSnapshot.docs) {
+
+          const user = userDoc.data();
+
+          if (!user.userId) continue;
+
+          try {
+
+            await axios.post(
+              "https://api.line.me/v2/bot/message/push",
+              {
+                to: user.userId,
+                messages: [{
+                  type: "text",
+                  text: `🔔 งาน "${data.title}" วิชา ${data.subject} ถึงกำหนดส่งแล้ว!`
+                }]
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                  "Content-Type": "application/json"
+                }
+              }
+            );
+
+            console.log("ส่งแจ้งเตือนให้:", user.userId);
+
+          } catch (err) {
+
+            console.log("ส่ง LINE ไม่สำเร็จ:", err.response?.data || err.message);
+
+          }
+
+        }
+
+        await doc.ref.update({ notified: true });
+
+      }
+
+    }
+
+  } catch (err) {
+
+    console.log("Cron error:", err);
+
+  }
+
+});
+
 // =====================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server running on port " + PORT));
