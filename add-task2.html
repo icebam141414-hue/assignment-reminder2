@@ -170,31 +170,34 @@
     try {
       const response = await fetch("/add-tasks", {
         method: "POST",
-        credentials: "include", // ✅ สำคัญสำหรับ session login
+        credentials: "include", // สำคัญสำหรับ session login
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          subject,
-          title,
-          dueDate
+          subject: subject,
+          title: title,
+          dueDate: dueDate
         })
       });
 
-      const data = await response.text(); // server ส่ง text
-
+      const data = await response.text();
       console.log("Server:", data);
 
-      alert("เพิ่มงานสำเร็จ 🎉");
-      form.reset();
+      if (response.ok) {
+        alert("เพิ่มงานสำเร็จ 🎉");
+        form.reset();
+        window.location.href = "dashboard2.html";
+      } else {
+        alert("เพิ่มงานไม่สำเร็จ: " + data);
+      }
 
     } catch (error) {
-      console.error(error);
+      console.error("Fetch error:", error);
       alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
     }
   });
 </script>
-
 
 
 
