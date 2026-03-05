@@ -248,6 +248,10 @@ app.post("/webhook", async (req, res) => {
 // Cron Check Every 1 Minute
 // ==========================
 
+// ==========================
+// Cron Check Every 1 Minute
+// ==========================
+
 cron.schedule("* * * * *", async () => {
 
   try {
@@ -267,6 +271,9 @@ cron.schedule("* * * * *", async () => {
     for (const taskDoc of tasksSnapshot.docs) {
 
       const task = taskDoc.data();
+
+      if (!task.dueDate) continue;
+
       const due = new Date(task.dueDate);
 
       const diff = due.getTime() - now.getTime();
@@ -279,31 +286,48 @@ cron.schedule("* * * * *", async () => {
 
           const user = userDoc.data();
 
-          await axios.post(
-            "https://api.line.me/v2/bot/message/push",
-            {
-              to: user.userId,
-              messages: [
-                {
-                  type: "text",
-                  text: `⏰ เตือนงานใกล้ครบกำหนด
+          // เช็คก่อนส่ง
+          if (!user.userId) {
+            console.log("skip user without userId");
+            continue;
+          }
+
+          try {
+
+            await axios.post(
+              "https://api.line.me/v2/bot/message/push",
+              {
+                to: user.userId,
+                messages: [
+                  {
+                    type: "text",
+                    text: `⏰ เตือนงานใกล้ครบกำหนด
 
 วิชา: ${task.subject}
 งาน: ${task.title}
 
 เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
+                  }
+                ]
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                  "Content-Type": "application/json"
                 }
-              ]
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                "Content-Type": "application/json"
               }
-            }
-          );
+            );
 
-          console.log("sent to", user.userId);
+            console.log("sent to", user.userId);
+
+          } catch (sendError) {
+
+            console.log(
+              "LINE send error:",
+              sendError.response?.data || sendError.message
+            );
+
+          }
 
         }
 
@@ -322,7 +346,6 @@ cron.schedule("* * * * *", async () => {
   }
 
 });
-
 // ==========================
 
 const PORT = process.env.PORT || 3000;
