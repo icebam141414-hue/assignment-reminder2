@@ -149,32 +149,6 @@ app.get("/callback", async (req, res) => {
   }
 });
 
-// =====================================
-// ➕ สร้างงาน
-// =====================================
-app.post("/add-tasks", async (req, res) => {
-
-  if (!req.session.userId) {
-    return res.status(401).send("กรุณา Login ก่อน");
-  }
-
-  const { title, subject, dueDate } = req.body;
-
-  if (!title || !subject || !dueDate) {
-    return res.status(400).send("ข้อมูลไม่ครบ");
-  }
-
-  await db.collection("tasks").add({
-    title,
-    subject,
-    dueDate,
-    userId: req.session.userId,
-    notified: false,
-    createdAt: new Date()
-  });
-
-  res.send("บันทึกงานเรียบร้อยแล้ว");
-});
 
 // =====================================
 // 🔔 Webhook
