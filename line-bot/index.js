@@ -4,25 +4,15 @@ const bodyParser = require("body-parser");
 const admin = require("firebase-admin");
 const cron = require("node-cron");
 const session = require("express-session");
-const path = require("path");
 
 const app = express();
 app.set("trust proxy", 1);
 
-// =====================================
-// 🔥 Static Files
-// =====================================
 app.use(express.static(__dirname));
 
-// =====================================
-// 🔥 Body Parser
-// =====================================
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// =====================================
-// 🔥 Session
-// =====================================
 app.use(session({
   secret: process.env.SESSION_SECRET || "mysecret",
   resave: false,
@@ -34,47 +24,41 @@ app.use(session({
   }
 }));
 
-// =====================================
-// 🔥 Firebase
-// =====================================
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-  console.error("Missing FIREBASE_SERVICE_ACCOUNT");
-  process.exit(1);
-}
+// ==========================
+// Firebase
+// ==========================
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert(serviceAccount)
 });
 
 const db = admin.firestore();
 
-// =====================================
-// 🔥 ENV CHECK
-// =====================================
+// ==========================
+// ENV
+// ==========================
+
 const CHANNEL_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN;
 const LINE_LOGIN_CHANNEL_ID = process.env.LINE_LOGIN_CHANNEL_ID;
 const LINE_LOGIN_CHANNEL_SECRET = process.env.LINE_LOGIN_CHANNEL_SECRET;
 const BASE_URL = process.env.BASE_URL;
 
-if (!CHANNEL_ACCESS_TOKEN || !LINE_LOGIN_CHANNEL_ID || !LINE_LOGIN_CHANNEL_SECRET || !BASE_URL) {
-  console.error("Missing required ENV variables");
-  process.exit(1);
-}
-
 const addFriendUrl = "https://line.me/R/ti/p/@898vvvdb";
 
-// =====================================
-// 🏠 Home
-// =====================================
+// ==========================
+// Home
+// ==========================
+
 app.get("/", (req, res) => {
-  res.send("LINE Assignment Reminder is running 🚀");
+  res.send("LINE Assignment Reminder Running");
 });
 
-// =====================================
-// 🔐 Login Page
-// =====================================
+// ==========================
+// Login
+// ==========================
+
 app.get("/login", (req, res) => {
 
   const loginUrl =
@@ -89,24 +73,26 @@ app.get("/login", (req, res) => {
     <h2>ระบบแจ้งเตือนงาน</h2>
 
     <a href="${loginUrl}">
-      <button style="padding:10px 20px;">Login with LINE</button>
+      <button>Login with LINE</button>
     </a>
 
     <br><br>
 
     <a href="${addFriendUrl}">
-      <button style="padding:10px 20px;">➕ เพิ่มเพื่อน LINE Bot</button>
+      <button>เพิ่มเพื่อน LINE Bot</button>
     </a>
   `);
 });
 
-// =====================================
-// 🔐 Callback
-// =====================================
+// ==========================
+// Callback
+// ==========================
+
 app.get("/callback", async (req, res) => {
+
   try {
+
     const code = req.query.code;
-    if (!code) return res.send("No code received");
 
     const tokenResponse = await axios.post(
       "https://api.line.me/oauth2/v2.1/token",
@@ -124,9 +110,7 @@ app.get("/callback", async (req, res) => {
 
     const profileResponse = await axios.get(
       "https://api.line.me/v2/profile",
-      {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      }
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
     const userId = profileResponse.data.userId;
@@ -134,165 +118,179 @@ app.get("/callback", async (req, res) => {
     req.session.userId = userId;
 
     await db.collection("users").doc(userId).set({
-      userId,
+      userId: userId,
       createdAt: new Date()
     }, { merge: true });
 
-    res.send("Login สำเร็จแล้ว 🎉");
+    res.send("Login สำเร็จแล้ว");
 
-  } catch (error) {
-    console.error("Login error:", error.response?.data || error.message);
-    res.status(500).send("Login error");
+  } catch (err) {
+
+    console.log(err.response?.data || err.message);
+
+    res.send("Login error");
+
   }
+
 });
 
-// =====================================
-// ➕ สร้างงาน
-// =====================================
+// ==========================
+// Create Task
+// ==========================
+
 app.post("/create-task", async (req, res) => {
 
   if (!req.session.userId) {
-    return res.status(401).send("กรุณา Login ก่อน");
+    return res.send("กรุณา Login ก่อน");
   }
 
   const { title, subject, dueDate } = req.body;
 
   if (!title || !subject || !dueDate) {
-    return res.status(400).send("ข้อมูลไม่ครบ");
+    return res.send("ข้อมูลไม่ครบ");
   }
 
   await db.collection("tasks").add({
-    title,
-    subject,
-    dueDate,
+
+    title: title,
+    subject: subject,
+    dueDate: dueDate,
     userId: req.session.userId,
     notified: false,
     createdAt: new Date()
+
   });
 
   res.send("บันทึกงานเรียบร้อยแล้ว");
+
 });
 
-// =====================================
-// 🔔 Webhook
-// =====================================
+// ==========================
+// Webhook
+// ==========================
+
 app.post("/webhook", async (req, res) => {
 
   const events = req.body.events || [];
 
-  for (let event of events) {
+  for (const event of events) {
 
     if (event.type === "follow") {
 
       const userId = event.source.userId;
 
       await db.collection("users").doc(userId).set({
-        userId,
+
+        userId: userId,
         createdAt: new Date()
+
       }, { merge: true });
 
-      try {
-
-        await axios.post(
-          "https://api.line.me/v2/bot/message/push",
-          {
-            to: userId,
-            messages: [{
+      await axios.post(
+        "https://api.line.me/v2/bot/message/push",
+        {
+          to: userId,
+          messages: [
+            {
               type: "text",
               text: "เชื่อมต่อระบบแจ้งเตือนงานเรียบร้อยแล้ว"
-            }]
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-              "Content-Type": "application/json"
             }
+          ]
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+            "Content-Type": "application/json"
           }
-        );
+        }
+      );
 
-      } catch (err) {
-        console.log("LINE push error:", err.response?.data || err.message);
-      }
+      console.log("User follow:", userId);
 
     }
+
   }
 
   res.sendStatus(200);
+
 });
 
-// =====================================
-// ⏰ Cron แจ้งเตือนทุก 1 นาที
-// =====================================
+// ==========================
+// Cron Check Every 1 Minute
+// ==========================
+
 cron.schedule("* * * * *", async () => {
 
-  try {
+  console.log("Checking tasks...");
 
-    console.log("กำลังตรวจงานใน Firebase...");
+  const now = new Date();
 
-    const now = new Date();
+  const tasksSnapshot = await db.collection("tasks")
+    .where("notified", "==", false)
+    .get();
 
-    const tasksSnapshot = await db.collection("tasks").get();
-    const usersSnapshot = await db.collection("users").get();
+  if (tasksSnapshot.empty) return;
 
-    for (const doc of tasksSnapshot.docs) {
+  const usersSnapshot = await db.collection("users").get();
 
-      const data = doc.data();
+  for (const taskDoc of tasksSnapshot.docs) {
 
-      if (!data.dueDate || data.notified) continue;
+    const task = taskDoc.data();
+    const due = new Date(task.dueDate);
 
-      const dueDate = new Date(data.dueDate);
+    if (now >= due) {
 
-      if (now >= dueDate) {
+      for (const userDoc of usersSnapshot.docs) {
 
-        for (const userDoc of usersSnapshot.docs) {
+        const user = userDoc.data();
 
-          const user = userDoc.data();
+        try {
 
-          if (!user.userId) continue;
-
-          try {
-
-            await axios.post(
-              "https://api.line.me/v2/bot/message/push",
-              {
-                to: user.userId,
-                messages: [{
+          await axios.post(
+            "https://api.line.me/v2/bot/message/push",
+            {
+              to: user.userId,
+              messages: [
+                {
                   type: "text",
-                  text: `🔔 งาน "${data.title}" วิชา ${data.subject} ถึงกำหนดส่งแล้ว!`
-                }]
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                  "Content-Type": "application/json"
+                  text: `แจ้งเตือนงาน\nวิชา: ${task.subject}\nงาน: ${task.title}\nถึงกำหนดส่งแล้ว`
                 }
+              ]
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                "Content-Type": "application/json"
               }
-            );
+            }
+          );
 
-            console.log("ส่งแจ้งเตือนให้:", user.userId);
+          console.log("sent to", user.userId);
 
-          } catch (err) {
+        } catch (err) {
 
-            console.log("ส่ง LINE ไม่สำเร็จ:", err.response?.data || err.message);
-
-          }
+          console.log("send error", user.userId);
 
         }
 
-        await doc.ref.update({ notified: true });
-
       }
 
+      await taskDoc.ref.update({
+        notified: true
+      });
+
     }
-
-  } catch (err) {
-
-    console.log("Cron error:", err);
 
   }
 
 });
 
-// =====================================
+// ==========================
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running on port " + PORT));
+
+app.listen(PORT, () => {
+
+  console.log("Server running on port " + PORT);
+
+});
