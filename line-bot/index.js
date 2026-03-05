@@ -56,6 +56,33 @@ app.get("/", (req, res) => {
 });
 
 // ==========================
+// FIX TASKS (เพิ่ม notified ให้ task เก่า)
+// เปิดครั้งเดียวพอ
+// ==========================
+
+app.get("/fix-notified", async (req, res) => {
+
+  const tasks = await db.collection("tasks").get();
+
+  for (const doc of tasks.docs) {
+
+    const data = doc.data();
+
+    if (data.notified === undefined) {
+
+      await doc.ref.update({
+        notified: false
+      });
+
+    }
+
+  }
+
+  res.send("Fixed notified field for all tasks");
+
+});
+
+// ==========================
 // Login
 // ==========================
 
@@ -155,7 +182,6 @@ app.post("/create-task", async (req, res) => {
     title: title,
     subject: subject,
 
-    // แก้ตรงนี้
     dueDate: new Date(dueDate),
 
     userId: req.session.userId,
