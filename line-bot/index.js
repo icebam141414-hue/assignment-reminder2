@@ -154,7 +154,10 @@ app.post("/create-task", async (req, res) => {
 
     title: title,
     subject: subject,
-    dueDate: dueDate,
+
+    // แก้ตรงนี้
+    dueDate: new Date(dueDate),
+
     userId: req.session.userId,
     notified: false,
     createdAt: new Date()
@@ -221,33 +224,34 @@ app.post("/webhook", async (req, res) => {
 
 cron.schedule("* * * * *", async () => {
 
-  console.log("Checking tasks...");
+  try {
 
-  const now = new Date();
+    console.log("Checking tasks...");
 
-  const tasksSnapshot = await db.collection("tasks")
-    .where("notified", "==", false)
-    .get();
+    const now = new Date();
 
-  if (tasksSnapshot.empty) return;
+    const tasksSnapshot = await db.collection("tasks")
+      .where("notified", "==", false)
+      .get();
 
-  const usersSnapshot = await db.collection("users").get();
+    if (tasksSnapshot.empty) return;
 
-  for (const taskDoc of tasksSnapshot.docs) {
+    const usersSnapshot = await db.collection("users").get();
 
-    const task = taskDoc.data();
-    const due = new Date(task.dueDate);
+    for (const taskDoc of tasksSnapshot.docs) {
 
-    // แจ้งก่อน 24 ชั่วโมง
-    const reminderTime = new Date(due.getTime() - (24 * 60 * 60 * 1000));
+      const task = taskDoc.data();
+      const due = new Date(task.dueDate);
 
-    if (now >= reminderTime && now < due) {
+      const diff = due.getTime() - now.getTime();
 
-      for (const userDoc of usersSnapshot.docs) {
+      const hours24 = 24 * 60 * 60 * 1000;
 
-        const user = userDoc.data();
+      if (diff <= hours24 && diff > 0) {
 
-        try {
+        for (const userDoc of usersSnapshot.docs) {
+
+          const user = userDoc.data();
 
           await axios.post(
             "https://api.line.me/v2/bot/message/push",
@@ -256,7 +260,12 @@ cron.schedule("* * * * *", async () => {
               messages: [
                 {
                   type: "text",
-                  text: `แจ้งเตือนงาน (เหลือ 24 ชั่วโมง)\nวิชา: ${task.subject}\nงาน: ${task.title}\nกำหนดส่ง: ${task.dueDate}`
+                  text: `⏰ เตือนงานใกล้ครบกำหนด
+
+วิชา: ${task.subject}
+งาน: ${task.title}
+
+เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
                 }
               ]
             },
@@ -270,17 +279,19 @@ cron.schedule("* * * * *", async () => {
 
           console.log("sent to", user.userId);
 
-        } catch (err) {
-          console.log("send error", user.userId);
         }
+
+        await taskDoc.ref.update({
+          notified: true
+        });
 
       }
 
-      await taskDoc.ref.update({
-        notified: true
-      });
-
     }
+
+  } catch (error) {
+
+    console.log("Cron error:", error.message);
 
   }
 
