@@ -151,45 +151,55 @@
 
   </section>
 
+
+<script>
+  const form = document.getElementById("addTaskForm");
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault(); // กันหน้ารีเฟรช
+
+    const subject = document.getElementById("subject").value.trim();
+    const title = document.getElementById("task").value.trim();
+    const dueDate = document.getElementById("time").value;
+
+    if (!subject || !title || !dueDate) {
+      alert("กรุณากรอกข้อมูลให้ครบ");
+      return;
+    }
+
+    try {
+      const response = await fetch("/add-task", {
+        method: "POST",
+        credentials: "include", // ✅ สำคัญสำหรับ session login
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          subject,
+          title,
+          dueDate
+        })
+      });
+
+      const data = await response.text(); // server ส่ง text
+
+      console.log("Server:", data);
+
+      alert("เพิ่มงานสำเร็จ 🎉");
+      form.reset();
+
+    } catch (error) {
+      console.error(error);
+      alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
+    }
+  });
+</script>
+
+
+
+
   <!-- JS -->
-  <script>
-    const form = document.getElementById("addTaskForm");
 
-    form.addEventListener("submit", async function (e) {
-      e.preventDefault(); // 🔥 กันหน้าเด้ง
-
-      const subject = document.getElementById("subject").value.trim();
-      const title = document.getElementById("task").value.trim();
-      const deadline = document.getElementById("time").value;
-
-      try {
-        const response = await fetch("/add-tasks2", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            subject,
-            title,
-            deadline
-          })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          alert("เพิ่มงานสำเร็จ 🎉");
-          window.location.href = "dashboard2.html";
-        } else {
-          alert("เพิ่มงานไม่สำเร็จ");
-        }
-
-      } catch (error) {
-        console.error(error);
-        alert("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้");
-      }
-    });
-  </script>
 
 </body>
 </html>
