@@ -221,41 +221,51 @@ app.post("/webhook", async (req, res) => {
   console.log("กำลังตรวจงานใน Firebase...");
 
   const now = new Date();
+
   const tasksSnapshot = await db.collection("tasks").get();
+
+  const usersSnapshot = await db.collection("users").get();
 
 
   for (const doc of tasksSnapshot.docs) {
+
     const data = doc.data();
 
     if (!data.dueDate || data.notified) continue;
 
     if (now >= new Date(data.dueDate)) {
 
-      if (!data.userId) continue;
+      for (const userDoc of usersSnapshot.docs) {
 
-      await axios.post(
-        "https://api.line.me/v2/bot/message/push",
-        {
-          to: data.userId,
-          messages: [{
-            type: "text",
-            text: `🔔 งาน "${data.title}" วิชา ${data.subject} ถึงกำหนดส่งแล้ว!`
-          }]
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-            "Content-Type": "application/json"
+        const user = userDoc.data();
+
+        if (!user.userId) continue;
+
+        await axios.post(
+          "https://api.line.me/v2/bot/message/push",
+          {
+            to: user.userId,
+            messages: [{
+              type: "text",
+              text: `🔔 งาน "${data.title}" วิชา ${data.subject} ถึงกำหนดส่งแล้ว!`
+            }]
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+              "Content-Type": "application/json"
+            }
           }
-        }
-      );
+        );
+
+        console.log("ส่งแจ้งเตือนให้:", user.userId);
+      }
 
       await doc.ref.update({ notified: true });
     }
   }
 
 });
-
 // =====================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server running on port " + PORT));
