@@ -152,7 +152,7 @@ app.get("/callback", async (req, res) => {
 // =====================================
 // ➕ สร้างงาน
 // =====================================
-app.post("/add-task", async (req, res) => {
+app.post("/add-tasks", async (req, res) => {
 
   if (!req.session.userId) {
     return res.status(401).send("กรุณา Login ก่อน");
