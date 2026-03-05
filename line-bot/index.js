@@ -238,7 +238,10 @@ cron.schedule("* * * * *", async () => {
     const task = taskDoc.data();
     const due = new Date(task.dueDate);
 
-    if (now >= due) {
+    // แจ้งก่อน 24 ชั่วโมง
+    const reminderTime = new Date(due.getTime() - (24 * 60 * 60 * 1000));
+
+    if (now >= reminderTime && now < due) {
 
       for (const userDoc of usersSnapshot.docs) {
 
@@ -253,7 +256,7 @@ cron.schedule("* * * * *", async () => {
               messages: [
                 {
                   type: "text",
-                  text: `แจ้งเตือนงาน\nวิชา: ${task.subject}\nงาน: ${task.title}\nถึงกำหนดส่งแล้ว`
+                  text: `แจ้งเตือนงาน (เหลือ 24 ชั่วโมง)\nวิชา: ${task.subject}\nงาน: ${task.title}\nกำหนดส่ง: ${task.dueDate}`
                 }
               ]
             },
@@ -268,9 +271,7 @@ cron.schedule("* * * * *", async () => {
           console.log("sent to", user.userId);
 
         } catch (err) {
-
           console.log("send error", user.userId);
-
         }
 
       }
