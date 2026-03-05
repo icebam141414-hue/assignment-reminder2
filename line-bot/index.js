@@ -1,3 +1,4 @@
+
 const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
@@ -99,13 +100,11 @@ app.get("/login", (req, res) => {
     </a>
   `);
 });
-
 // =====================================
 // 🔐 Callback
 // =====================================
 app.get("/callback", async (req, res) => {
   try {
-
     const code = req.query.code;
     if (!code) return res.send("No code received");
 
@@ -132,7 +131,6 @@ app.get("/callback", async (req, res) => {
 
     const userId = profileResponse.data.userId;
 
-    // 🔥 บันทึก session
     req.session.userId = userId;
 
     await db.collection("users").doc(userId).set({
@@ -140,19 +138,18 @@ app.get("/callback", async (req, res) => {
       createdAt: new Date()
     }, { merge: true });
 
-    // 🔥 Redirect แบบปลอดภัย
-    return res.redirect("/dashboard2.html");
+    res.send("Login สำเร็จแล้ว 🎉");
 
   } catch (error) {
     console.error("Login error:", error.response?.data || error.message);
-    return res.status(500).send("Login error");
+    res.status(500).send("Login error");
   }
 });
 
 // =====================================
 // ➕ สร้างงาน
 // =====================================
-app.post("/add-tasks", async (req, res) => {
+app.post("/create-task", async (req, res) => {
 
   if (!req.session.userId) {
     return res.status(401).send("กรุณา Login ก่อน");
@@ -180,7 +177,6 @@ app.post("/add-tasks", async (req, res) => {
 // 🔔 Webhook
 // =====================================
 app.post("/webhook", async (req, res) => {
-
   const events = req.body.events || [];
 
   for (let event of events) {
@@ -218,13 +214,16 @@ app.post("/webhook", async (req, res) => {
 // =====================================
 // ⏰ Cron แจ้งเตือนทุก 1 นาที
 // =====================================
-cron.schedule("* * * * *", async () => {
+
+  cron.schedule("* * * * *", async () => {
+
+  console.log("กำลังตรวจงานใน Firebase...");
 
   const now = new Date();
   const tasksSnapshot = await db.collection("tasks").get();
 
-  for (const doc of tasksSnapshot.docs) {
 
+  for (const doc of tasksSnapshot.docs) {
     const data = doc.data();
 
     if (!data.dueDate || data.notified) continue;
@@ -253,8 +252,9 @@ cron.schedule("* * * * *", async () => {
       await doc.ref.update({ notified: true });
     }
   }
+
 });
 
 // =====================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running on port " + PORT));
+app.listen(PORT, () => console.log("Server running on port " + PORT));ถูกยังอะ
