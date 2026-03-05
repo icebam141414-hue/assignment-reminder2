@@ -56,8 +56,7 @@ app.get("/", (req, res) => {
 });
 
 // ==========================
-// FIX TASKS (เพิ่ม notified ให้ task เก่า)
-// เปิดครั้งเดียวพอ
+// FIX TASKS
 // ==========================
 
 app.get("/fix-notified", async (req, res) => {
@@ -181,9 +180,7 @@ app.post("/create-task", async (req, res) => {
 
     title: title,
     subject: subject,
-
     dueDate: new Date(dueDate),
-
     userId: req.session.userId,
     notified: false,
     createdAt: new Date()
@@ -248,10 +245,6 @@ app.post("/webhook", async (req, res) => {
 // Cron Check Every 1 Minute
 // ==========================
 
-// ==========================
-// Cron Check Every 1 Minute
-// ==========================
-
 cron.schedule("* * * * *", async () => {
 
   try {
@@ -282,11 +275,12 @@ cron.schedule("* * * * *", async () => {
 
       if (diff <= hours24 && diff > 0) {
 
+        const dueDateText = due.toLocaleString("th-TH");
+
         for (const userDoc of usersSnapshot.docs) {
 
           const user = userDoc.data();
 
-          // เช็คก่อนส่ง
           if (!user.userId) {
             console.log("skip user without userId");
             continue;
@@ -301,12 +295,14 @@ cron.schedule("* * * * *", async () => {
                 messages: [
                   {
                     type: "text",
-                    text: `⏰ เตือนงานใกล้ครบกำหนด
+                    text: `⏰ แจ้งเตือนงานใกล้ครบกำหนด
 
-วิชา: ${task.subject}
-งาน: ${task.title}
+📚 วิชา: ${task.subject}
+📝 งาน: ${task.title}
 
-เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
+📅 กำหนดส่ง: ${dueDateText}
+
+⚠️ เหลือเวลาไม่ถึง 24 ชั่วโมง`
                   }
                 ]
               },
@@ -346,6 +342,7 @@ cron.schedule("* * * * *", async () => {
   }
 
 });
+
 // ==========================
 
 const PORT = process.env.PORT || 3000;
