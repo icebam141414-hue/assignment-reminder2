@@ -30,10 +30,11 @@ app.use(session({
   saveUninitialized: false,
   proxy: true,
   cookie: {
-    secure: true,      // 🔥 เปลี่ยนเป็น true
-    sameSite: "none"   // 🔥 เปลี่ยนเป็น none
+    secure: false,
+    sameSite: "lax"
   }
 }));
+ 
 
 // =====================================
 // 🔥 Firebase
@@ -257,4 +258,4 @@ app.post("/webhook", async (req, res) => {
 
 // =====================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running on port " + PORT));ถูกยังอะ
+app.listen(PORT, () => console.log("Server running on port " + PORT));
