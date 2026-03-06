@@ -247,7 +247,6 @@ app.post("/webhook", async (req, res) => {
 // ==========================
 // Cron Check Every 1 Minute
 // ==========================
-
 // ==========================
 // Cron Check Every 1 Minute
 // ==========================
@@ -346,6 +345,7 @@ cron.schedule("* * * * *", async () => {
   }
 
 });
+
 // ==========================
 
 const PORT = process.env.PORT || 3000;
@@ -354,4 +354,4 @@ app.listen(PORT, () => {
 
   console.log("Server running on port " + PORT);
 
-}); 
+});ขอทั้งก้อนมาใหม่เลยเอาที่แก้แล้ว
