@@ -251,7 +251,7 @@ cron.schedule("* * * * *", async () => {
       const diff = due.getTime() - now.getTime();
       const hours24 = 24 * 60 * 60 * 1000;
 
-      if (diff <= hours24 && diff > 0) {
+      if (diff <= hours24) {
 
         const dueText = due.toLocaleString("th-TH", {
           dateStyle: "medium",
