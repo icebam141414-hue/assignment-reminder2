@@ -9,7 +9,6 @@ const app = express();
 app.set("trust proxy", 1);
 
 app.use(express.static(__dirname));
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -53,33 +52,6 @@ const addFriendUrl = "https://line.me/R/ti/p/@898vvvdb";
 
 app.get("/", (req, res) => {
   res.send("LINE Assignment Reminder Running");
-});
-
-// ==========================
-// FIX TASKS (เพิ่ม notified ให้ task เก่า)
-// เปิดครั้งเดียวพอ
-// ==========================
-
-app.get("/fix-notified", async (req, res) => {
-
-  const tasks = await db.collection("tasks").get();
-
-  for (const doc of tasks.docs) {
-
-    const data = doc.data();
-
-    if (data.notified === undefined) {
-
-      await doc.ref.update({
-        notified: false
-      });
-
-    }
-
-  }
-
-  res.send("Fixed notified field for all tasks");
-
 });
 
 // ==========================
@@ -181,7 +153,6 @@ app.post("/create-task", async (req, res) => {
 
     title: title,
     subject: subject,
-
     dueDate: new Date(dueDate),
 
     userId: req.session.userId,
@@ -209,10 +180,8 @@ app.post("/webhook", async (req, res) => {
       const userId = event.source.userId;
 
       await db.collection("users").doc(userId).set({
-
         userId: userId,
         createdAt: new Date()
-
       }, { merge: true });
 
       await axios.post(
@@ -245,10 +214,7 @@ app.post("/webhook", async (req, res) => {
 });
 
 // ==========================
-// Cron Check Every 1 Minute
-// ==========================
-// ==========================
-// Cron Check Every 1 Minute
+// Cron Check Every Minute
 // ==========================
 
 cron.schedule("* * * * *", async () => {
@@ -273,23 +239,30 @@ cron.schedule("* * * * *", async () => {
 
       if (!task.dueDate) continue;
 
-      const due = new Date(task.dueDate);
+      let due;
+
+      // รองรับ Firestore Timestamp
+      if (task.dueDate.toDate) {
+        due = task.dueDate.toDate();
+      } else {
+        due = new Date(task.dueDate);
+      }
 
       const diff = due.getTime() - now.getTime();
-
       const hours24 = 24 * 60 * 60 * 1000;
 
       if (diff <= hours24 && diff > 0) {
+
+        const dueText = due.toLocaleString("th-TH", {
+          dateStyle: "medium",
+          timeStyle: "short"
+        });
 
         for (const userDoc of usersSnapshot.docs) {
 
           const user = userDoc.data();
 
-          // เช็คก่อนส่ง
-          if (!user.userId) {
-            console.log("skip user without userId");
-            continue;
-          }
+          if (!user.userId) continue;
 
           try {
 
@@ -302,8 +275,10 @@ cron.schedule("* * * * *", async () => {
                     type: "text",
                     text: `⏰ เตือนงานใกล้ครบกำหนด
 
-วิชา: ${task.subject}
-งาน: ${task.title}
+📚 วิชา: ${task.subject}
+📝 งาน: ${task.title}
+
+📅 กำหนดส่ง: ${dueText}
 
 เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
                   }
@@ -351,7 +326,5 @@ cron.schedule("* * * * *", async () => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-
   console.log("Server running on port " + PORT);
-
 });
