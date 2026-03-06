@@ -225,9 +225,7 @@ cron.schedule("* * * * *", async () => {
 
     const now = new Date();
 
-    const tasksSnapshot = await db.collection("tasks")
-      .where("notified", "==", false)
-      .get();
+   const tasksSnapshot = await db.collection("tasks").get();
 
     if (tasksSnapshot.empty) return;
 
@@ -236,6 +234,7 @@ cron.schedule("* * * * *", async () => {
     for (const taskDoc of tasksSnapshot.docs) {
 
       const task = taskDoc.data();
+      if (task.notified === true) continue;
 
       if (!task.dueDate) continue;
 
@@ -247,12 +246,10 @@ cron.schedule("* * * * *", async () => {
       } else {
         due = new Date(task.dueDate);
       }
+const diff = due.getTime() - now.getTime();
+const hours24 = 24 * 60 * 60 * 1000;
 
-      const diff = due.getTime() - now.getTime();
-      const hours24 = 24 * 60 * 60 * 1000;
-
-      if (diff <= hours24) {
-
+if (diff > 0 && diff <= hours24) {
         const dueText = due.toLocaleString("th-TH", {
           dateStyle: "medium",
           timeStyle: "short"
