@@ -1,5 +1,3 @@
-process.env.TZ = "Asia/Bangkok";
-
 const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
@@ -154,9 +152,7 @@ app.post("/create-task", async (req, res) => {
 
     title: title,
     subject: subject,
-
-    // แก้ตรงนี้ให้เป็น Firestore Timestamp
-    dueDate: admin.firestore.Timestamp.fromDate(new Date(dueDate)),
+    dueDate: new Date(dueDate),
 
     userId: req.session.userId,
     notified: false,
@@ -178,6 +174,7 @@ app.post("/webhook", async (req, res) => {
 
   for (const event of events) {
 
+    // user add bot
     if (event.type === "follow") {
 
       const userId = event.source.userId;
@@ -191,6 +188,7 @@ app.post("/webhook", async (req, res) => {
 
     }
 
+    // save group id
     if (event.source.type === "group") {
 
       const groupId = event.source.groupId;
@@ -209,6 +207,10 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 
 });
+
+// ==========================
+// Cron Check Every Minute
+// ==========================
 
 // ==========================
 // Cron Check Every Minute
@@ -234,7 +236,14 @@ cron.schedule("* * * * *", async () => {
       if (task.notified === true) continue;
       if (!task.dueDate) continue;
 
-      const due = task.dueDate.toDate();
+      let due;
+
+      // รองรับทั้ง Timestamp และ String
+      if (task.dueDate.toDate) {
+        due = task.dueDate.toDate();
+      } else {
+        due = new Date(task.dueDate);
+      }
 
       const diff = due.getTime() - now.getTime();
       const hours24 = 24 * 60 * 60 * 1000;
