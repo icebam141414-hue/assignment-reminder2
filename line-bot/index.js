@@ -211,7 +211,6 @@ app.post("/webhook", async (req, res) => {
 // ==========================
 // Cron Check Every Minute
 // ==========================
-
 cron.schedule("* * * * *", async () => {
 
   try {
@@ -230,7 +229,6 @@ cron.schedule("* * * * *", async () => {
 
       const task = taskDoc.data();
       if (task.notified === true) continue;
-
       if (!task.dueDate) continue;
 
       let due;
@@ -244,7 +242,8 @@ cron.schedule("* * * * *", async () => {
       const diff = due.getTime() - now.getTime();
       const hours24 = 24 * 60 * 60 * 1000;
 
-      if (diff > 0 && diff <= hours24) {
+      // เตือนเมื่อเหลือไม่เกิน 24 ชั่วโมง
+      if (diff <= hours24 && diff > 0) {
 
         const dueText = due.toLocaleString("th-TH", {
           dateStyle: "medium",
