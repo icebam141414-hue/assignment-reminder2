@@ -1,3 +1,4 @@
+process.env.TZ = "Asia/Bangkok";
 const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
@@ -61,11 +62,11 @@ app.get("/", (req, res) => {
 app.get("/login", (req, res) => {
 
   const loginUrl =
-    `https://access.line.me/oauth2/v2.1/authorize` +
-    `?response_type=code` +
-    `&client_id=${LINE_LOGIN_CHANNEL_ID}` +
-    `&redirect_uri=${BASE_URL}/callback` +
-    `&state=12345` +
+    https://access.line.me/oauth2/v2.1/authorize +
+    ?response_type=code +
+    &client_id=${LINE_LOGIN_CHANNEL_ID} +
+    &redirect_uri=${BASE_URL}/callback +
+    &state=12345 +
     `&scope=profile%20openid`;
 
   res.send(`
@@ -109,7 +110,7 @@ app.get("/callback", async (req, res) => {
 
     const profileResponse = await axios.get(
       "https://api.line.me/v2/profile",
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      { headers: { Authorization: Bearer ${accessToken} } }
     );
 
     const userId = profileResponse.data.userId;
@@ -211,9 +212,6 @@ app.post("/webhook", async (req, res) => {
 // ==========================
 // Cron Check Every Minute
 // ==========================
-// ==========================
-// Cron Check Every Minute
-// ==========================
 
 cron.schedule("* * * * *", async () => {
 
@@ -232,13 +230,12 @@ cron.schedule("* * * * *", async () => {
     for (const taskDoc of tasksSnapshot.docs) {
 
       const task = taskDoc.data();
-
       if (task.notified === true) continue;
+
       if (!task.dueDate) continue;
 
       let due;
 
-      // รองรับ Timestamp และ Date/String
       if (task.dueDate.toDate) {
         due = task.dueDate.toDate();
       } else {
@@ -246,12 +243,9 @@ cron.schedule("* * * * *", async () => {
       }
 
       const diff = due.getTime() - now.getTime();
-
       const hours24 = 24 * 60 * 60 * 1000;
-      const hours23 = 23 * 60 * 60 * 1000;
 
-      // เตือนตอนเหลือประมาณ 24 ชั่วโมง
-      if (diff <= hours24 && diff > hours23) {
+      if (diff > 0 && diff <= hours24) {
 
         const dueText = due.toLocaleString("th-TH", {
           dateStyle: "medium",
@@ -267,10 +261,10 @@ cron.schedule("* * * * *", async () => {
 
 📅 กำหนดส่ง: ${dueText}
 
-เหลือเวลาประมาณ 24 ชั่วโมงแล้ว`
+เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
         };
 
-        // ส่งให้ user
+        // send to users
         for (const userDoc of usersSnapshot.docs) {
 
           const user = userDoc.data();
@@ -302,7 +296,7 @@ cron.schedule("* * * * *", async () => {
 
         }
 
-        // ส่งให้ group
+        // send to groups
         for (const groupDoc of groupsSnapshot.docs) {
 
           const group = groupDoc.data();
