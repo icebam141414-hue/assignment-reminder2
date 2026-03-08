@@ -126,7 +126,6 @@ app.get("/callback", async (req, res) => {
   } catch (err) {
 
     console.log(err.response?.data || err.message);
-
     res.send("Login error");
 
   }
@@ -175,6 +174,7 @@ app.post("/webhook", async (req, res) => {
 
   for (const event of events) {
 
+    // user add bot
     if (event.type === "follow") {
 
       const userId = event.source.userId;
@@ -184,26 +184,21 @@ app.post("/webhook", async (req, res) => {
         createdAt: new Date()
       }, { merge: true });
 
-      await axios.post(
-        "https://api.line.me/v2/bot/message/push",
-        {
-          to: userId,
-          messages: [
-            {
-              type: "text",
-              text: "เชื่อมต่อระบบแจ้งเตือนงานเรียบร้อยแล้ว"
-            }
-          ]
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
       console.log("User follow:", userId);
+
+    }
+
+    // save group id
+    if (event.source.type === "group") {
+
+      const groupId = event.source.groupId;
+
+      await db.collection("groups").doc(groupId).set({
+        groupId: groupId,
+        createdAt: new Date()
+      }, { merge: true });
+
+      console.log("Saved group:", groupId);
 
     }
 
@@ -225,11 +220,11 @@ cron.schedule("* * * * *", async () => {
 
     const now = new Date();
 
-   const tasksSnapshot = await db.collection("tasks").get();
-
+    const tasksSnapshot = await db.collection("tasks").get();
     if (tasksSnapshot.empty) return;
 
     const usersSnapshot = await db.collection("users").get();
+    const groupsSnapshot = await db.collection("groups").get();
 
     for (const taskDoc of tasksSnapshot.docs) {
 
@@ -240,25 +235,38 @@ cron.schedule("* * * * *", async () => {
 
       let due;
 
-      // รองรับ Firestore Timestamp
       if (task.dueDate.toDate) {
         due = task.dueDate.toDate();
       } else {
         due = new Date(task.dueDate);
       }
-const diff = due.getTime() - now.getTime();
-const hours24 = 24 * 60 * 60 * 1000;
 
-if (diff > 0 && diff <= hours24) {
+      const diff = due.getTime() - now.getTime();
+      const hours24 = 24 * 60 * 60 * 1000;
+
+      if (diff > 0 && diff <= hours24) {
+
         const dueText = due.toLocaleString("th-TH", {
           dateStyle: "medium",
           timeStyle: "short"
         });
 
+        const message = {
+          type: "text",
+          text: `⏰ เตือนงานใกล้ครบกำหนด
+
+📚 วิชา: ${task.subject}
+📝 งาน: ${task.title}
+
+📅 กำหนดส่ง: ${dueText}
+
+เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
+        };
+
+        // send to users
         for (const userDoc of usersSnapshot.docs) {
 
           const user = userDoc.data();
-
           if (!user.userId) continue;
 
           try {
@@ -267,19 +275,7 @@ if (diff > 0 && diff <= hours24) {
               "https://api.line.me/v2/bot/message/push",
               {
                 to: user.userId,
-                messages: [
-                  {
-                    type: "text",
-                    text: `⏰ เตือนงานใกล้ครบกำหนด
-
-📚 วิชา: ${task.subject}
-📝 งาน: ${task.title}
-
-📅 กำหนดส่ง: ${dueText}
-
-เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
-                  }
-                ]
+                messages: [message]
               },
               {
                 headers: {
@@ -289,14 +285,43 @@ if (diff > 0 && diff <= hours24) {
               }
             );
 
-            console.log("sent to", user.userId);
+            console.log("sent to user", user.userId);
 
-          } catch (sendError) {
+          } catch (err) {
 
-            console.log(
-              "LINE send error:",
-              sendError.response?.data || sendError.message
+            console.log("LINE user error:", err.response?.data || err.message);
+
+          }
+
+        }
+
+        // send to groups
+        for (const groupDoc of groupsSnapshot.docs) {
+
+          const group = groupDoc.data();
+          if (!group.groupId) continue;
+
+          try {
+
+            await axios.post(
+              "https://api.line.me/v2/bot/message/push",
+              {
+                to: group.groupId,
+                messages: [message]
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                  "Content-Type": "application/json"
+                }
+              }
             );
+
+            console.log("sent to group", group.groupId);
+
+          } catch (err) {
+
+            console.log("LINE group error:", err.response?.data || err.message);
 
           }
 
