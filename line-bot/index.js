@@ -62,11 +62,11 @@ app.get("/", (req, res) => {
 app.get("/login", (req, res) => {
 
   const loginUrl =
-    https://access.line.me/oauth2/v2.1/authorize +
-    ?response_type=code +
-    &client_id=${LINE_LOGIN_CHANNEL_ID} +
-    &redirect_uri=${BASE_URL}/callback +
-    &state=12345 +
+    `https://access.line.me/oauth2/v2.1/authorize` +
+    `?response_type=code` +
+    `&client_id=${LINE_LOGIN_CHANNEL_ID}` +
+    `&redirect_uri=${BASE_URL}/callback` +
+    `&state=12345` +
     `&scope=profile%20openid`;
 
   res.send(`
@@ -110,7 +110,7 @@ app.get("/callback", async (req, res) => {
 
     const profileResponse = await axios.get(
       "https://api.line.me/v2/profile",
-      { headers: { Authorization: Bearer ${accessToken} } }
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
     const userId = profileResponse.data.userId;
@@ -243,9 +243,13 @@ cron.schedule("* * * * *", async () => {
       }
 
       const diff = due.getTime() - now.getTime();
-      const hours24 = 24 * 60 * 60 * 1000;
+const hours24 = 24 * 60 * 60 * 1000;
 
-      if (diff > 0 && diff <= hours24) {
+console.log("NOW:", now);
+console.log("DUE:", due);
+console.log("DIFF(ms):", diff);
+
+if (diff > 0 && diff <= hours24) {
 
         const dueText = due.toLocaleString("th-TH", {
           dateStyle: "medium",
