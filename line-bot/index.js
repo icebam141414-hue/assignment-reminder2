@@ -1,3 +1,5 @@
+process.env.TZ = "Asia/Bangkok";
+
 const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
@@ -152,7 +154,9 @@ app.post("/create-task", async (req, res) => {
 
     title: title,
     subject: subject,
-    dueDate: new Date(dueDate),
+
+    // แก้ตรงนี้ให้เป็น Firestore Timestamp
+    dueDate: admin.firestore.Timestamp.fromDate(new Date(dueDate)),
 
     userId: req.session.userId,
     notified: false,
@@ -174,7 +178,6 @@ app.post("/webhook", async (req, res) => {
 
   for (const event of events) {
 
-    // user add bot
     if (event.type === "follow") {
 
       const userId = event.source.userId;
@@ -188,7 +191,6 @@ app.post("/webhook", async (req, res) => {
 
     }
 
-    // save group id
     if (event.source.type === "group") {
 
       const groupId = event.source.groupId;
@@ -230,16 +232,9 @@ cron.schedule("* * * * *", async () => {
 
       const task = taskDoc.data();
       if (task.notified === true) continue;
-
       if (!task.dueDate) continue;
 
-      let due;
-
-      if (task.dueDate.toDate) {
-        due = task.dueDate.toDate();
-      } else {
-        due = new Date(task.dueDate);
-      }
+      const due = task.dueDate.toDate();
 
       const diff = due.getTime() - now.getTime();
       const hours24 = 24 * 60 * 60 * 1000;
@@ -263,67 +258,49 @@ cron.schedule("* * * * *", async () => {
 เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
         };
 
-        // send to users
         for (const userDoc of usersSnapshot.docs) {
 
           const user = userDoc.data();
           if (!user.userId) continue;
 
-          try {
-
-            await axios.post(
-              "https://api.line.me/v2/bot/message/push",
-              {
-                to: user.userId,
-                messages: [message]
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                  "Content-Type": "application/json"
-                }
+          await axios.post(
+            "https://api.line.me/v2/bot/message/push",
+            {
+              to: user.userId,
+              messages: [message]
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                "Content-Type": "application/json"
               }
-            );
+            }
+          );
 
-            console.log("sent to user", user.userId);
-
-          } catch (err) {
-
-            console.log("LINE user error:", err.response?.data || err.message);
-
-          }
+          console.log("sent to user", user.userId);
 
         }
 
-        // send to groups
         for (const groupDoc of groupsSnapshot.docs) {
 
           const group = groupDoc.data();
           if (!group.groupId) continue;
 
-          try {
-
-            await axios.post(
-              "https://api.line.me/v2/bot/message/push",
-              {
-                to: group.groupId,
-                messages: [message]
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                  "Content-Type": "application/json"
-                }
+          await axios.post(
+            "https://api.line.me/v2/bot/message/push",
+            {
+              to: group.groupId,
+              messages: [message]
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                "Content-Type": "application/json"
               }
-            );
+            }
+          );
 
-            console.log("sent to group", group.groupId);
-
-          } catch (err) {
-
-            console.log("LINE group error:", err.response?.data || err.message);
-
-          }
+          console.log("sent to group", group.groupId);
 
         }
 
