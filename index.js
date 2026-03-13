@@ -331,20 +331,19 @@ cron.schedule("* * * * *", async () => {
 
           try {
 
-            await axios.post(
-              "https://api.line.me/v2/bot/message/push",
-              {
-                to: user.userId,
-                messages: [message]
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                  "Content-Type": "application/json"
-                }
-              }
-            );
-
+          await axios.post(
+  "https://api.line.me/v2/bot/message/push",
+  {
+    to: group.groupId,
+    messages: [message]
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+      "Content-Type": "application/json"
+    }
+  }
+);
           } catch (err) {
 
             console.log("LINE user error:", err.response?.data || err.message);
