@@ -1,51 +1,43 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>เข้าสู่ระบบ | Assignment Reminder</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="login.css">
+<meta charset="UTF-8">
+<title>เข้าสู่ระบบ | Assignment Reminder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="login.css">
 </head>
+
 <body>
 
 <div class="login-page">
 
   <div class="login-info">
     <h1>เข้าสู่ระบบ 👋</h1>
-    <p>
-      กรุณากรอกอีเมลของคุณ<br>
-      เพื่อใช้งานระบบแจ้งเตือนงาน
-    </p>
+    <p>กรอกอีเมลและรหัสผ่านที่ใช้สมัคร</p>
   </div>
 
   <div class="login-card">
     <h2>Login</h2>
 
-    <form action="/login-email" method="POST">
+    <form action="/login" method="POST">
 
       <input 
-        type="email" 
-        name="email"
-        placeholder="กรอกอีเมล"
-        required
-        style="
-        width:100%;
-        padding:12px;
-        margin-bottom:12px;
-        border-radius:8px;
-        border:1px solid #ccc;
-        ">
+      type="email"
+      name="email"
+      placeholder="อีเมล"
+      required
+      style="width:100%;padding:12px;margin-bottom:10px;border-radius:8px;border:1px solid #ccc;">
 
-      <button type="submit" style="
-        width:100%;
-        padding:14px;
-        border:none;
-        border-radius:8px;
-        background:#06C755;
-        color:white;
-        font-size:16px;
-        cursor:pointer;">
-        เข้าสู่ระบบ
+      <input 
+      type="password"
+      name="password"
+      placeholder="รหัสผ่าน"
+      required
+      style="width:100%;padding:12px;margin-bottom:10px;border-radius:8px;border:1px solid #ccc;">
+
+      <button type="submit"
+      style="width:100%;padding:14px;border:none;border-radius:8px;background:#06C755;color:white;font-size:16px;">
+      เข้าสู่ระบบ
       </button>
 
     </form>
