@@ -55,7 +55,7 @@ app.post("/login", (req, res) => {
 // Dashboard
 // =====================
 
-app.get("/dashboard", (req, res) => {
+app.get("/dashboard2.html", (req, res) => {
 
   if (!req.session.userId) {
     return res.redirect("/login.html");
