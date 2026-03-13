@@ -39,29 +39,33 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    tasks.forEach((task, index) => {
+    tasks.forEach((task) => {
       const div = document.createElement("div");
 
       const statusClass = getTaskStatus(task.dueDate);
       div.className = `task-card ${statusClass}`;
 
+      const dueText = task.dueDate
+        ? new Date(task.dueDate).toLocaleString("th-TH")
+        : "ไม่มีวันที่";
+
       div.innerHTML = `
         <div class="task-info">
           <strong>${task.subject}</strong>
           <p>${task.title}</p>
-          <p>⏰ ${new Date(task.dueDate).toLocaleString()}</p>
+          <p>⏰ ${dueText}</p>
         </div>
 
         <div class="task-actions">
           ${
             task.completed
               ? `<span class="done-label">ส่งแล้ว ✅</span>`
-              : `<button class="done-btn" onclick="completeTask(${index})">
+              : `<button class="done-btn" onclick="completeTask('${task.id}')">
                    ส่งงานแล้ว
                  </button>`
           }
-          <button class="edit-btn" onclick="editTask(${index})">แก้ไข</button>
-          <button class="delete-btn" onclick="deleteTask(${index})">ลบ</button>
+          <button class="edit-btn" onclick="editTask('${task.id}')">แก้ไข</button>
+          <button class="delete-btn" onclick="deleteTask('${task.id}')">ลบ</button>
         </div>
       `;
 
@@ -72,8 +76,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // =============================
   // ส่งงานแล้ว
   // =============================
-  window.completeTask = async function (index) {
-    await fetch(`/tasks/${index}/complete`, {
+  window.completeTask = async function (id) {
+    await fetch(`/tasks/${id}/complete`, {
       method: "PUT",
     });
     renderTasks();
@@ -82,10 +86,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // =============================
   // ลบ
   // =============================
-  window.deleteTask = async function (index) {
+  window.deleteTask = async function (id) {
     if (!confirm("ต้องการลบงานนี้ใช่ไหม?")) return;
 
-    await fetch(`/tasks/${index}`, {
+    await fetch(`/tasks/${id}`, {
       method: "DELETE",
     });
 
@@ -95,9 +99,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // =============================
   // แก้ไข
   // =============================
-  window.editTask = async function (index) {
+  window.editTask = async function (id) {
     const tasks = await getTasks();
-    const task = tasks[index];
+    const task = tasks.find((t) => t.id === id);
 
     const newSubject = prompt("แก้ไขชื่อวิชา", task.subject);
     if (newSubject === null) return;
@@ -105,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const newTitle = prompt("แก้ไขชื่องาน", task.title);
     if (newTitle === null) return;
 
-    await fetch(`/tasks/${index}`, {
+    await fetch(`/tasks/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -135,14 +139,13 @@ async function checkDueTasks() {
 
     const now = new Date();
 
-    tasks.forEach((task, index) => {
+    tasks.forEach((task) => {
       if (task.completed) return;
 
       const due = new Date(task.dueDate);
 
-      // ถ้าเลยเวลาแล้ว และยังไม่เคยแจ้งเตือน
-      if (due <= now && !notifiedTasks.has(index)) {
-        notifiedTasks.add(index);
+      if (due <= now && !notifiedTasks.has(task.id)) {
+        notifiedTasks.add(task.id);
 
         alert(`🔔 ถึงเวลาส่งงาน!\nวิชา: ${task.subject}\nงาน: ${task.title}`);
       }
@@ -155,5 +158,5 @@ async function checkDueTasks() {
 // เช็คทุก 30 วิ
 setInterval(checkDueTasks, 30000);
 
-// เปิดหน้าเว็บ → เช็คทันที 1 รอบ
+// เปิดหน้าเว็บ → เช็คทันที
 checkDueTasks();
