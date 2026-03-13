@@ -130,6 +130,7 @@ app.post("/create-task", async (req, res) => {
     userId: req.session.userId,
     notified: false,
     completed: false,
+    status: "pending",   // เพิ่มสถานะเริ่มต้น
     createdAt: new Date()
 
   });
@@ -166,7 +167,8 @@ app.get("/tasks", async (req, res) => {
         subject: data.subject || "",
         title: title || "",
         dueDate: dueDate || "",
-        completed: data.completed || false
+        completed: data.completed || false,
+        status: data.status || "pending"
       });
 
     });
@@ -215,8 +217,23 @@ app.put("/tasks/:id/complete", async (req, res) => {
 
     const id = req.params.id;
 
+    const doc = await db.collection("tasks").doc(id).get();
+    const task = doc.data();
+
+    let dueRaw = task.dueDate || task.time;
+    let due = dueRaw.toDate ? dueRaw.toDate() : new Date(dueRaw);
+
+    const now = new Date();
+
+    let status = "ontime";
+
+    if (now > due) {
+      status = "late";
+    }
+
     await db.collection("tasks").doc(id).update({
-      completed: true
+      completed: true,
+      status: status
     });
 
     res.json({ success: true });
@@ -294,9 +311,6 @@ cron.schedule("* * * * *", async () => {
 
       const task = taskDoc.data();
 
-      if (task.notified === true) continue;
-
-      // รองรับทั้ง dueDate และ time
       if (!task.dueDate && !task.time) continue;
 
       let due;
@@ -310,6 +324,15 @@ cron.schedule("* * * * *", async () => {
 
       const diff = due.getTime() - now.getTime();
       const hours24 = 24 * 60 * 60 * 1000;
+
+      // งานเลยเวลาแล้วยังไม่ส่ง
+      if (now > due && !task.completed && task.status !== "missing") {
+        await taskDoc.ref.update({
+          status: "missing"
+        });
+      }
+
+      if (task.notified === true) continue;
 
       if (diff > 0 && diff <= hours24) {
 
@@ -352,9 +375,7 @@ cron.schedule("* * * * *", async () => {
             );
 
           } catch (err) {
-
             console.log("LINE user error:", err.response?.data || err.message);
-
           }
 
         }
@@ -381,9 +402,7 @@ cron.schedule("* * * * *", async () => {
             );
 
           } catch (err) {
-
             console.log("LINE group error:", err.response?.data || err.message);
-
           }
 
         }
@@ -411,4 +430,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
-
