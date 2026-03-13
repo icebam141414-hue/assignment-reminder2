@@ -129,6 +129,7 @@ app.post("/create-task", async (req, res) => {
 
     userId: req.session.userId,
     notified: false,
+    completed: false,
     createdAt: new Date()
 
   });
@@ -146,7 +147,6 @@ app.get("/tasks", async (req, res) => {
   try {
 
     const snapshot = await db.collection("tasks").get();
-
     const tasks = [];
 
     snapshot.forEach(doc => {
@@ -160,6 +160,7 @@ app.get("/tasks", async (req, res) => {
       }
 
       tasks.push({
+        id: doc.id,   // ⭐ สำคัญ (ให้ปุ่มลบทำงาน)
         subject: data.subject,
         title: data.title,
         dueDate: dueDate,
@@ -174,6 +175,54 @@ app.get("/tasks", async (req, res) => {
 
     console.log("Load tasks error:", error);
     res.status(500).json({ error: "โหลดงานไม่สำเร็จ" });
+
+  }
+
+});
+
+// ==========================
+// Delete Task
+// ==========================
+
+app.delete("/tasks/:id", async (req, res) => {
+
+  try {
+
+    const id = req.params.id;
+
+    await db.collection("tasks").doc(id).delete();
+
+    res.json({ success: true });
+
+  } catch (error) {
+
+    console.log("Delete error:", error);
+    res.status(500).json({ error: "ลบงานไม่ได้" });
+
+  }
+
+});
+
+// ==========================
+// Complete Task
+// ==========================
+
+app.put("/tasks/:id/complete", async (req, res) => {
+
+  try {
+
+    const id = req.params.id;
+
+    await db.collection("tasks").doc(id).update({
+      completed: true
+    });
+
+    res.json({ success: true });
+
+  } catch (error) {
+
+    console.log("Complete error:", error);
+    res.status(500).json({ error: "อัปเดตไม่ได้" });
 
   }
 
@@ -243,7 +292,6 @@ cron.schedule("* * * * *", async () => {
 
       const task = taskDoc.data();
       if (task.notified === true) continue;
-
       if (!task.dueDate) continue;
 
       let due;
@@ -320,7 +368,7 @@ cron.schedule("* * * * *", async () => {
               },
               {
                 headers: {
-                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}",
                   "Content-Type": "application/json"
                 }
               }
