@@ -45,8 +45,6 @@ const LINE_LOGIN_CHANNEL_ID = process.env.LINE_LOGIN_CHANNEL_ID;
 const LINE_LOGIN_CHANNEL_SECRET = process.env.LINE_LOGIN_CHANNEL_SECRET;
 const BASE_URL = process.env.BASE_URL;
 
-const addFriendUrl = "https://line.me/R/ti/p/@898vvvdb";
-
 // ==========================
 // Home
 // ==========================
@@ -56,80 +54,101 @@ app.get("/", (req, res) => {
 });
 
 // ==========================
-// Login
+// Register
 // ==========================
 
-app.get("/login", (req, res) => {
+app.post("/register", async (req, res) => {
 
-  const loginUrl =
-    `https://access.line.me/oauth2/v2.1/authorize` +
-    `?response_type=code` +
-    `&client_id=${LINE_LOGIN_CHANNEL_ID}` +
-    `&redirect_uri=${BASE_URL}/callback` +
-    `&state=12345` +
-    `&scope=profile%20openid`;
+  const { email, password } = req.body;
 
-  res.send(`
-    <h2>ระบบแจ้งเตือนงาน</h2>
+  if (!email || !password) {
+    return res.send("กรอกข้อมูลไม่ครบ");
+  }
 
-    <a href="${loginUrl}">
-      <button>Login with LINE</button>
-    </a>
+  const userRef = await db.collection("users").add({
+    email: email,
+    password: password,
+    createdAt: new Date()
+  });
 
-    <br><br>
+  res.send("สมัครสมาชิกสำเร็จ");
 
-    <a href="${addFriendUrl}">
-      <button>เพิ่มเพื่อน LINE Bot</button>
-    </a>
-  `);
 });
 
 // ==========================
-// Callback
+// Login
 // ==========================
 
-app.get("/callback", async (req, res) => {
+app.post("/login", async (req, res) => {
 
-  try {
+  const { email, password } = req.body;
 
-    const code = req.query.code;
-
-    const tokenResponse = await axios.post(
-      "https://api.line.me/oauth2/v2.1/token",
-      new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: `${BASE_URL}/callback`,
-        client_id: LINE_LOGIN_CHANNEL_ID,
-        client_secret: LINE_LOGIN_CHANNEL_SECRET
-      }),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-    );
-
-    const accessToken = tokenResponse.data.access_token;
-
-    const profileResponse = await axios.get(
-      "https://api.line.me/v2/profile",
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-
-    const userId = profileResponse.data.userId;
-
-    req.session.userId = userId;
-
-    await db.collection("users").doc(userId).set({
-      userId: userId,
-      createdAt: new Date()
-    }, { merge: true });
-
-    res.send("Login สำเร็จแล้ว");
-
-  } catch (err) {
-
-    console.log(err.response?.data || err.message);
-    res.send("Login error");
-
+  if (!email || !password) {
+    return res.send("กรุณากรอกอีเมลและรหัสผ่าน");
   }
+
+  const snapshot = await db
+    .collection("users")
+    .where("email", "==", email)
+    .where("password", "==", password)
+    .get();
+
+  if (snapshot.empty) {
+    return res.send("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+  }
+
+  const user = snapshot.docs[0].data();
+
+  req.session.userId = snapshot.docs[0].id;
+
+  res.redirect("/dashboard");
+
+});
+
+// ==========================
+// Dashboard
+// ==========================
+
+app.get("/dashboard", (req, res) => {
+
+  if (!req.session.userId) {
+    return res.redirect("/login.html");
+  }
+
+  res.send(`
+  <h1>Dashboard</h1>
+
+  <form action="/create-task" method="POST">
+
+  <input name="subject" placeholder="วิชา"><br><br>
+
+  <input name="title" placeholder="ชื่องาน"><br><br>
+
+  <input type="datetime-local" name="dueDate"><br><br>
+
+  <button type="submit">เพิ่มงาน</button>
+
+  </form>
+
+  <br>
+
+  <a href="/logout">
+  <button>Logout</button>
+  </a>
+
+  `);
+
+});
+
+// ==========================
+// Logout
+// ==========================
+
+app.get("/logout", (req, res) => {
+
+  req.session.destroy(() => {
+    res.redirect("/login.html");
+  });
 
 });
 
@@ -166,183 +185,74 @@ app.post("/create-task", async (req, res) => {
 });
 
 // ==========================
-// Webhook
-// ==========================
-
-app.post("/webhook", async (req, res) => {
-
-  const events = req.body.events || [];
-
-  for (const event of events) {
-
-    // user add bot
-    if (event.type === "follow") {
-
-      const userId = event.source.userId;
-
-      await db.collection("users").doc(userId).set({
-        userId: userId,
-        createdAt: new Date()
-      }, { merge: true });
-
-      console.log("User follow:", userId);
-
-    }
-
-    // save group id
-    if (event.source.type === "group") {
-
-      const groupId = event.source.groupId;
-
-      await db.collection("groups").doc(groupId).set({
-        groupId: groupId,
-        createdAt: new Date()
-      }, { merge: true });
-
-      console.log("Saved group:", groupId);
-
-    }
-
-  }
-
-  res.sendStatus(200);
-
-});
-
-// ==========================
-// Cron Check Every Minute
+// Cron ตรวจงานทุก 1 นาที
 // ==========================
 
 cron.schedule("* * * * *", async () => {
 
-  try {
+  const now = new Date();
+  const hours24 = 24 * 60 * 60 * 1000;
 
-    console.log("Checking tasks...");
+  const tasksSnapshot = await db.collection("tasks").get();
 
-    const now = new Date();
+  for (const taskDoc of tasksSnapshot.docs) {
 
-    const tasksSnapshot = await db.collection("tasks").get();
-    if (tasksSnapshot.empty) return;
+    const task = taskDoc.data();
 
-    const usersSnapshot = await db.collection("users").get();
-    const groupsSnapshot = await db.collection("groups").get();
+    if (task.notified) continue;
 
-    for (const taskDoc of tasksSnapshot.docs) {
+    const due = new Date(task.dueDate);
+    const diff = due.getTime() - now.getTime();
 
-      const task = taskDoc.data();
-      if (task.notified === true) continue;
+    if (diff > 0 && diff <= hours24) {
 
-      if (!task.dueDate) continue;
-
-      let due;
-
-      if (task.dueDate.toDate) {
-        due = task.dueDate.toDate();
-      } else {
-        due = new Date(task.dueDate);
-      }
-
-      const diff = due.getTime() - now.getTime();
-const hours24 = 24 * 60 * 60 * 1000;
-
-console.log("NOW:", now);
-console.log("DUE:", due);
-console.log("DIFF(ms):", diff);
-
-if (diff > 0 && diff <= hours24) {
-
-        const dueText = due.toLocaleString("th-TH", {
-          dateStyle: "medium",
-          timeStyle: "short"
-        });
-
-        const message = {
-          type: "text",
-          text: `⏰ เตือนงานใกล้ครบกำหนด
+      const message = {
+        type: "text",
+        text: `⏰ เตือนงานใกล้ครบกำหนด
 
 📚 วิชา: ${task.subject}
 📝 งาน: ${task.title}
 
-📅 กำหนดส่ง: ${dueText}
+เหลือเวลาไม่ถึง 24 ชั่วโมง`
+      };
 
-เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
-        };
+      const usersSnapshot = await db.collection("users").get();
 
-        // send to users
-        for (const userDoc of usersSnapshot.docs) {
+      for (const userDoc of usersSnapshot.docs) {
 
-          const user = userDoc.data();
-          if (!user.userId) continue;
+        const user = userDoc.data();
 
-          try {
+        if (!user.userId) continue;
 
-            await axios.post(
-              "https://api.line.me/v2/bot/message/push",
-              {
-                to: user.userId,
-                messages: [message]
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                  "Content-Type": "application/json"
-                }
+        try {
+
+          await axios.post(
+            "https://api.line.me/v2/bot/message/push",
+            {
+              to: user.userId,
+              messages: [message]
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                "Content-Type": "application/json"
               }
-            );
+            }
+          );
 
-            console.log("sent to user", user.userId);
+        } catch (err) {
 
-          } catch (err) {
-
-            console.log("LINE user error:", err.response?.data || err.message);
-
-          }
+          console.log(err.message);
 
         }
-
-        // send to groups
-        for (const groupDoc of groupsSnapshot.docs) {
-
-          const group = groupDoc.data();
-          if (!group.groupId) continue;
-
-          try {
-
-            await axios.post(
-              "https://api.line.me/v2/bot/message/push",
-              {
-                to: group.groupId,
-                messages: [message]
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                  "Content-Type": "application/json"
-                }
-              }
-            );
-
-            console.log("sent to group", group.groupId);
-
-          } catch (err) {
-
-            console.log("LINE group error:", err.response?.data || err.message);
-
-          }
-
-        }
-
-        await taskDoc.ref.update({
-          notified: true
-        });
 
       }
 
+      await taskDoc.ref.update({
+        notified: true
+      });
+
     }
-
-  } catch (error) {
-
-    console.log("Cron error:", error.message);
 
   }
 
@@ -353,5 +263,5 @@ if (diff > 0 && diff <= hours24) {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Server running on port " + PORT); 
+  console.log("Server running on port " + PORT);
 });
