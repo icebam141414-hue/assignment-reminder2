@@ -1,4 +1,3 @@
-```javascript
 process.env.TZ = "Asia/Bangkok";
 
 const express = require("express");
