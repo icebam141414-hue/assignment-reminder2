@@ -1,3 +1,4 @@
+```javascript
 process.env.TZ = "Asia/Bangkok";
 
 const express = require("express");
@@ -153,17 +154,21 @@ app.get("/tasks", async (req, res) => {
 
       const data = doc.data();
 
-      let dueDate = data.dueDate;
+      // รองรับทั้ง dueDate และ time
+      let dueDate = data.dueDate || data.time;
 
       if (dueDate && dueDate.toDate) {
         dueDate = dueDate.toDate();
       }
 
+      // รองรับทั้ง title และ task
+      const title = data.title || data.task;
+
       tasks.push({
         id: doc.id,
-        subject: data.subject,
-        title: data.title,
-        dueDate: dueDate,
+        subject: data.subject || "",
+        title: title || "",
+        dueDate: dueDate || "",
         completed: data.completed || false
       });
 
@@ -317,14 +322,13 @@ cron.schedule("* * * * *", async () => {
           text: `⏰ เตือนงานใกล้ครบกำหนด
 
 📚 วิชา: ${task.subject}
-📝 งาน: ${task.title}
+📝 งาน: ${task.title || task.task}
 
 📅 กำหนดส่ง: ${dueText}
 
 เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
         };
 
-        // ส่งให้ USER
         for (const userDoc of usersSnapshot.docs) {
 
           const user = userDoc.data();
@@ -354,7 +358,6 @@ cron.schedule("* * * * *", async () => {
 
         }
 
-        // ส่งให้ GROUP
         for (const groupDoc of groupsSnapshot.docs) {
 
           const group = groupDoc.data();
@@ -407,3 +410,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
+```
