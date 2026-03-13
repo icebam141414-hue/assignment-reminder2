@@ -153,14 +153,12 @@ app.get("/tasks", async (req, res) => {
 
       const data = doc.data();
 
-      // รองรับทั้ง dueDate และ time
       let dueDate = data.dueDate || data.time;
 
       if (dueDate && dueDate.toDate) {
         dueDate = dueDate.toDate();
       }
 
-      // รองรับทั้ง title และ task
       const title = data.title || data.task;
 
       tasks.push({
@@ -295,15 +293,19 @@ cron.schedule("* * * * *", async () => {
     for (const taskDoc of tasksSnapshot.docs) {
 
       const task = taskDoc.data();
+
       if (task.notified === true) continue;
-      if (!task.dueDate) continue;
+
+      // รองรับทั้ง dueDate และ time
+      if (!task.dueDate && !task.time) continue;
 
       let due;
+      let dueRaw = task.dueDate || task.time;
 
-      if (task.dueDate.toDate) {
-        due = task.dueDate.toDate();
+      if (dueRaw.toDate) {
+        due = dueRaw.toDate();
       } else {
-        due = new Date(task.dueDate);
+        due = new Date(dueRaw);
       }
 
       const diff = due.getTime() - now.getTime();
@@ -409,3 +411,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
+
