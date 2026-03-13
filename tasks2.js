@@ -1,3 +1,4 @@
+```javascript
 document.addEventListener("DOMContentLoaded", () => {
   const taskList = document.getElementById("taskList");
 
@@ -22,10 +23,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const now = new Date();
     const due = new Date(dueTime);
-    const diffDays = (due - now) / (1000 * 60 * 60 * 24);
 
-    if (diffDays <= 1) return "task-red";
-    if (diffDays <= 7) return "task-yellow";
+    const diffMs = due - now;
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    // เลยกำหนด
+    if (diffMs < 0) {
+      return "task-red";
+    }
+
+    // เหลือไม่เกิน 24 ชั่วโมง
+    if (diffHours <= 24) {
+      return "task-yellow";
+    }
+
+    // ยังอีกนาน
     return "task-green";
   }
 
@@ -160,7 +172,9 @@ async function checkDueTasks() {
       if (dueDate <= now && !notifiedTasks.has(task.id)) {
         notifiedTasks.add(task.id);
 
-        alert(`🔔 ถึงเวลาส่งงาน!\nวิชา: ${task.subject}\nงาน: ${task.title || task.task}`);
+        alert(`🔔 ถึงเวลาส่งงาน!
+วิชา: ${task.subject}
+งาน: ${task.title || task.task}`);
       }
     });
   } catch (err) {
@@ -173,3 +187,4 @@ setInterval(checkDueTasks, 30000);
 
 // เปิดหน้าเว็บ → เช็คทันที
 checkDueTasks();
+```
