@@ -40,48 +40,12 @@ app.get("/", (req, res) => {
 });
 
 // =====================
-// Register
+// Login (เข้าได้ทันที)
 // =====================
 
-app.post("/register", async (req, res) => {
+app.post("/login", (req, res) => {
 
-  const { email } = req.body;
-
-  if (!email) {
-    return res.send("กรุณากรอก email");
-  }
-
-  await db.collection("users").add({
-    email: email,
-    createdAt: new Date()
-  });
-
-  res.send("สมัครสำเร็จ");
-
-});
-
-// =====================
-// Login
-// =====================
-
-app.post("/login", async (req, res) => {
-
-  const { email } = req.body;
-
-  if (!email) {
-    return res.send("กรุณากรอก email");
-  }
-
-  const snapshot = await db
-    .collection("users")
-    .where("email", "==", email)
-    .get();
-
-  if (snapshot.empty) {
-    return res.send("ไม่พบอีเมลนี้");
-  }
-
-  req.session.userId = snapshot.docs[0].id;
+  req.session.userId = "testuser";
 
   res.redirect("/dashboard");
 
@@ -115,7 +79,6 @@ app.get("/dashboard", (req, res) => {
   <br>
 
   <a href="/logout">Logout</a>
-
   `);
 
 });
