@@ -139,7 +139,7 @@ app.post("/create-task", async (req, res) => {
 });
 
 // ==========================
-// 🔹 API ให้หน้าเว็บดึงงาน
+// API ดึงงาน
 // ==========================
 
 app.get("/tasks", async (req, res) => {
@@ -160,7 +160,7 @@ app.get("/tasks", async (req, res) => {
       }
 
       tasks.push({
-        id: doc.id,   // ⭐ สำคัญ (ให้ปุ่มลบทำงาน)
+        id: doc.id,
         subject: data.subject,
         title: data.title,
         dueDate: dueDate,
@@ -271,7 +271,7 @@ app.post("/webhook", async (req, res) => {
 });
 
 // ==========================
-// Cron Check Every Minute
+// Cron Check
 // ==========================
 
 cron.schedule("* * * * *", async () => {
@@ -324,6 +324,7 @@ cron.schedule("* * * * *", async () => {
 เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
         };
 
+        // ส่งให้ USER
         for (const userDoc of usersSnapshot.docs) {
 
           const user = userDoc.data();
@@ -331,19 +332,20 @@ cron.schedule("* * * * *", async () => {
 
           try {
 
-          await axios.post(
-  "https://api.line.me/v2/bot/message/push",
-  {
-    to: group.groupId,
-    messages: [message]
-  },
-  {
-    headers: {
-      Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-      "Content-Type": "application/json"
-    }
-  }
-);
+            await axios.post(
+              "https://api.line.me/v2/bot/message/push",
+              {
+                to: user.userId,
+                messages: [message]
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                  "Content-Type": "application/json"
+                }
+              }
+            );
+
           } catch (err) {
 
             console.log("LINE user error:", err.response?.data || err.message);
@@ -352,6 +354,7 @@ cron.schedule("* * * * *", async () => {
 
         }
 
+        // ส่งให้ GROUP
         for (const groupDoc of groupsSnapshot.docs) {
 
           const group = groupDoc.data();
@@ -367,7 +370,7 @@ cron.schedule("* * * * *", async () => {
               },
               {
                 headers: {
-                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}",
+                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
                   "Content-Type": "application/json"
                 }
               }
