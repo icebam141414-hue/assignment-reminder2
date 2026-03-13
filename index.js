@@ -130,7 +130,7 @@ app.post("/create-task", async (req, res) => {
     userId: req.session.userId,
     notified: false,
     completed: false,
-    status: "pending",   // เพิ่มสถานะเริ่มต้น
+    status: "pending",
     createdAt: new Date()
 
   });
@@ -150,7 +150,7 @@ app.get("/tasks", async (req, res) => {
     const snapshot = await db.collection("tasks").get();
     const tasks = [];
 
-    snapshot.forEach(doc => {
+    for (const doc of snapshot.docs) {
 
       const data = doc.data();
 
@@ -162,6 +162,20 @@ app.get("/tasks", async (req, res) => {
 
       const title = data.title || data.task;
 
+      // ===== เพิ่มอัตโนมัติถ้ายังไม่มี status =====
+      if (!data.status) {
+
+        await db.collection("tasks").doc(doc.id).update({
+          status: "pending",
+          completed: data.completed || false
+        });
+
+        data.status = "pending";
+        data.completed = data.completed || false;
+
+      }
+      // ============================================
+
       tasks.push({
         id: doc.id,
         subject: data.subject || "",
@@ -171,7 +185,7 @@ app.get("/tasks", async (req, res) => {
         status: data.status || "pending"
       });
 
-    });
+    }
 
     res.json(tasks);
 
@@ -266,8 +280,6 @@ app.post("/webhook", async (req, res) => {
         createdAt: new Date()
       }, { merge: true });
 
-      console.log("User follow:", userId);
-
     }
 
     if (event.source.type === "group") {
@@ -278,8 +290,6 @@ app.post("/webhook", async (req, res) => {
         groupId: groupId,
         createdAt: new Date()
       }, { merge: true });
-
-      console.log("Saved group:", groupId);
 
     }
 
@@ -296,8 +306,6 @@ app.post("/webhook", async (req, res) => {
 cron.schedule("* * * * *", async () => {
 
   try {
-
-    console.log("Checking tasks...");
 
     const now = new Date();
 
@@ -325,7 +333,6 @@ cron.schedule("* * * * *", async () => {
       const diff = due.getTime() - now.getTime();
       const hours24 = 24 * 60 * 60 * 1000;
 
-      // งานเลยเวลาแล้วยังไม่ส่ง
       if (now > due && !task.completed && task.status !== "missing") {
         await taskDoc.ref.update({
           status: "missing"
@@ -358,25 +365,19 @@ cron.schedule("* * * * *", async () => {
           const user = userDoc.data();
           if (!user.userId) continue;
 
-          try {
-
-            await axios.post(
-              "https://api.line.me/v2/bot/message/push",
-              {
-                to: user.userId,
-                messages: [message]
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                  "Content-Type": "application/json"
-                }
+          await axios.post(
+            "https://api.line.me/v2/bot/message/push",
+            {
+              to: user.userId,
+              messages: [message]
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                "Content-Type": "application/json"
               }
-            );
-
-          } catch (err) {
-            console.log("LINE user error:", err.response?.data || err.message);
-          }
+            }
+          );
 
         }
 
@@ -385,25 +386,19 @@ cron.schedule("* * * * *", async () => {
           const group = groupDoc.data();
           if (!group.groupId) continue;
 
-          try {
-
-            await axios.post(
-              "https://api.line.me/v2/bot/message/push",
-              {
-                to: group.groupId,
-                messages: [message]
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                  "Content-Type": "application/json"
-                }
+          await axios.post(
+            "https://api.line.me/v2/bot/message/push",
+            {
+              to: group.groupId,
+              messages: [message]
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                "Content-Type": "application/json"
               }
-            );
-
-          } catch (err) {
-            console.log("LINE group error:", err.response?.data || err.message);
-          }
+            }
+          );
 
         }
 
@@ -422,8 +417,6 @@ cron.schedule("* * * * *", async () => {
   }
 
 });
-
-// ==========================
 
 const PORT = process.env.PORT || 3000;
 
