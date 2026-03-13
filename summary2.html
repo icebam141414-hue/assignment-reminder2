@@ -20,7 +20,6 @@
       color: #111;
     }
 
-    /* ===== HEADER ===== */
     header {
       background: #111827;
       color: #fff;
@@ -41,14 +40,12 @@
       font-size: 15px;
     }
 
-    /* ===== CONTAINER ===== */
     .container {
       max-width: 1200px;
       margin: 32px auto;
       padding: 0 24px;
     }
 
-    /* ===== SUMMARY CARDS ===== */
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -79,7 +76,6 @@
     .late { color: #ef4444; }
     .pending { color: #f59e0b; }
 
-    /* ===== MAIN GRID ===== */
     .main-grid {
       display: grid;
       grid-template-columns: 1.2fr 1fr;
@@ -87,7 +83,6 @@
       align-items: start;
     }
 
-    /* ===== CHART ===== */
     .chart-card {
       background: #fff;
       border-radius: 24px;
@@ -103,7 +98,6 @@
       max-height: 280px !important;
     }
 
-    /* ===== TASK LIST ===== */
     .task-section {
       display: grid;
       grid-template-columns: 1fr;
@@ -135,7 +129,6 @@
       border-bottom: none;
     }
 
-    /* ===== MOBILE ===== */
     @media (max-width: 900px) {
       .summary-grid {
         grid-template-columns: 1fr;
@@ -161,7 +154,6 @@
 
 <div class="container">
 
-  <!-- SUMMARY -->
   <div class="summary-grid">
     <div class="summary-card">
       <h3>งานเสร็จตรงเวลา</h3>
@@ -177,16 +169,14 @@
     </div>
   </div>
 
-  <!-- MAIN -->
   <div class="main-grid">
 
-    <!-- CHART -->
     <div class="chart-card">
       <canvas id="taskChart"></canvas>
     </div>
 
-    <!-- TASK LIST -->
     <div class="task-section">
+
       <div class="task-card">
         <h4>✅ เสร็จตรงเวลา</h4>
         <div id="doneList"></div>
@@ -201,38 +191,60 @@
         <h4>❌ ยังไม่ได้ส่ง</h4>
         <div id="pendingList"></div>
       </div>
+
     </div>
 
   </div>
 </div>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
 <script>
-  const tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+const firebaseConfig = {
+  apiKey: "AIzaSyA0zWQ5f9M7kW9hGyAJ9dtzcPikUQXIPZE",
+  authDomain: "assignment-reminder-b1027.firebaseapp.com",
+  projectId: "assignment-reminder-b1027",
+  storageBucket: "assignment-reminder-b1027.firebasestorage.app",
+  messagingSenderId: "334199580488",
+  appId: "1:334199580488:web:35a4570922ad7ea0c3b57d"
+};
 
-  let done = 0, late = 0, pending = 0;
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-  const doneList = document.getElementById("doneList");
-  const lateList = document.getElementById("lateList");
-  const pendingList = document.getElementById("pendingList");
+let done = 0;
+let late = 0;
+let pending = 0;
 
-  tasks.forEach(t => {
-    const now = new Date();
-    const due = new Date(t.time);
+const doneList = document.getElementById("doneList");
+const lateList = document.getElementById("lateList");
+const pendingList = document.getElementById("pendingList");
+
+db.collection("tasks").get().then((snapshot) => {
+
+  snapshot.forEach((doc) => {
+
+    const t = doc.data();
 
     const item = document.createElement("div");
     item.className = "task-item";
     item.innerText = `${t.subject} - ${t.task}`;
 
-    if (t.completed === true && due >= now) {
+    if (t.status === "ontime") {
       done++;
       doneList.appendChild(item);
-    } else if (t.completed === true && due < now) {
+    }
+    else if (t.status === "late") {
       late++;
       lateList.appendChild(item);
-    } else {
+    }
+    else {
       pending++;
       pendingList.appendChild(item);
     }
+
   });
 
   document.getElementById("countDone").innerText = done;
@@ -258,6 +270,8 @@
       }
     }
   });
+
+});
 </script>
 
 </body>
