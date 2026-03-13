@@ -18,6 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // ดูสถานะเวลา (สี)
   // =============================
   function getTaskStatus(dueTime) {
+    if (!dueTime) return "task-green";
+
     const now = new Date();
     const due = new Date(dueTime);
     const diffDays = (due - now) / (1000 * 60 * 60 * 24);
@@ -42,17 +44,22 @@ document.addEventListener("DOMContentLoaded", () => {
     tasks.forEach((task) => {
       const div = document.createElement("div");
 
-      const statusClass = getTaskStatus(task.dueDate);
+      // รองรับชื่อ field ทั้งสองแบบ
+      const subject = task.subject || "ไม่ระบุวิชา";
+      const title = task.title || task.task || "ไม่มีรายละเอียด";
+      const dueRaw = task.dueDate || task.time;
+
+      const statusClass = getTaskStatus(dueRaw);
       div.className = `task-card ${statusClass}`;
 
-      const dueText = task.dueDate
-        ? new Date(task.dueDate).toLocaleString("th-TH")
+      const dueText = dueRaw
+        ? new Date(dueRaw).toLocaleString("th-TH")
         : "ไม่มีวันที่";
 
       div.innerHTML = `
         <div class="task-info">
-          <strong>${task.subject}</strong>
-          <p>${task.title}</p>
+          <strong>${subject}</strong>
+          <p>${title}</p>
           <p>⏰ ${dueText}</p>
         </div>
 
@@ -103,10 +110,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const tasks = await getTasks();
     const task = tasks.find((t) => t.id === id);
 
-    const newSubject = prompt("แก้ไขชื่อวิชา", task.subject);
+    const subject = task.subject || "";
+    const title = task.title || task.task || "";
+
+    const newSubject = prompt("แก้ไขชื่อวิชา", subject);
     if (newSubject === null) return;
 
-    const newTitle = prompt("แก้ไขชื่องาน", task.title);
+    const newTitle = prompt("แก้ไขชื่องาน", title);
     if (newTitle === null) return;
 
     await fetch(`/tasks/${id}`, {
@@ -142,12 +152,15 @@ async function checkDueTasks() {
     tasks.forEach((task) => {
       if (task.completed) return;
 
-      const due = new Date(task.dueDate);
+      const due = task.dueDate || task.time;
+      if (!due) return;
 
-      if (due <= now && !notifiedTasks.has(task.id)) {
+      const dueDate = new Date(due);
+
+      if (dueDate <= now && !notifiedTasks.has(task.id)) {
         notifiedTasks.add(task.id);
 
-        alert(`🔔 ถึงเวลาส่งงาน!\nวิชา: ${task.subject}\nงาน: ${task.title}`);
+        alert(`🔔 ถึงเวลาส่งงาน!\nวิชา: ${task.subject}\nงาน: ${task.title || task.task}`);
       }
     });
   } catch (err) {
