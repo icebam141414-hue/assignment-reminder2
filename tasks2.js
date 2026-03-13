@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // =============================
   async function getTasks() {
     try {
-      const res = await fetch("http://localhost:3000/tasks");
+      const res = await fetch("/tasks");
       return await res.json();
     } catch (err) {
       console.error("❌ ดึงงานไม่ได้", err);
@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ส่งงานแล้ว
   // =============================
   window.completeTask = async function (index) {
-    await fetch(`http://localhost:3000/tasks/${index}/complete`, {
+    await fetch(`/tasks/${index}/complete`, {
       method: "PUT",
     });
     renderTasks();
@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.deleteTask = async function (index) {
     if (!confirm("ต้องการลบงานนี้ใช่ไหม?")) return;
 
-    await fetch(`http://localhost:3000/tasks/${index}`, {
+    await fetch(`/tasks/${index}`, {
       method: "DELETE",
     });
 
@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const newTitle = prompt("แก้ไขชื่องาน", task.title);
     if (newTitle === null) return;
 
-    await fetch(`http://localhost:3000/tasks/${index}`, {
+    await fetch(`/tasks/${index}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -130,7 +130,7 @@ const notifiedTasks = new Set();
 
 async function checkDueTasks() {
   try {
-    const res = await fetch("http://localhost:3000/tasks");
+    const res = await fetch("/tasks");
     const tasks = await res.json();
 
     const now = new Date();
