@@ -298,11 +298,9 @@ app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
 
 });
-
 // ==========================
 // Cron Check
 // ==========================
-
 cron.schedule("* * * * *", async () => {
 
   try {
@@ -321,26 +319,26 @@ cron.schedule("* * * * *", async () => {
 
       if (!task.dueDate && !task.time) continue;
 
-      let due;
       let dueRaw = task.dueDate || task.time;
-
-      if (dueRaw.toDate) {
-        due = dueRaw.toDate();
-      } else {
-        due = new Date(dueRaw);
-      }
+      let due = dueRaw.toDate ? dueRaw.toDate() : new Date(dueRaw);
 
       const diff = due.getTime() - now.getTime();
       const hours24 = 24 * 60 * 60 * 1000;
 
+      const subject = task.subject || "ไม่ระบุวิชา";
+      const title = task.title || task.task || "ไม่มีชื่องาน";
+
+      // ถ้าเลยกำหนดและยังไม่ส่ง
       if (now > due && !task.completed && task.status !== "missing") {
         await taskDoc.ref.update({
           status: "missing"
         });
       }
 
+      // ถ้าแจ้งเตือนไปแล้ว ข้าม
       if (task.notified === true) continue;
 
+      // แจ้งเตือนก่อน 24 ชั่วโมง
       if (diff > 0 && diff <= hours24) {
 
         const dueText = due.toLocaleString("th-TH", {
@@ -352,53 +350,67 @@ cron.schedule("* * * * *", async () => {
           type: "text",
           text: `⏰ เตือนงานใกล้ครบกำหนด
 
-📚 วิชา: ${task.subject}
-📝 งาน: ${task.title || task.task}
+📚 วิชา: ${subject}
+📝 งาน: ${title}
 
 📅 กำหนดส่ง: ${dueText}
 
 เหลือเวลาไม่ถึง 24 ชั่วโมงแล้ว`
         };
 
+        // ส่งให้ USER
         for (const userDoc of usersSnapshot.docs) {
 
-          const user = userDoc.data();
-          if (!user.userId) continue;
+          const userId = userDoc.data().userId;
+          if (!userId) continue;
 
-          await axios.post(
-            "https://api.line.me/v2/bot/message/push",
-            {
-              to: user.userId,
-              messages: [message]
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                "Content-Type": "application/json"
+          try {
+
+            await axios.post(
+              "https://api.line.me/v2/bot/message/push",
+              {
+                to: userId,
+                messages: [message]
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                  "Content-Type": "application/json"
+                }
               }
-            }
-          );
+            );
+
+          } catch (err) {
+            console.log("LINE push error:", err.response?.data || err.message);
+          }
 
         }
 
+        // ส่งให้ GROUP
         for (const groupDoc of groupsSnapshot.docs) {
 
-          const group = groupDoc.data();
-          if (!group.groupId) continue;
+          const groupId = groupDoc.data().groupId;
+          if (!groupId) continue;
 
-          await axios.post(
-            "https://api.line.me/v2/bot/message/push",
-            {
-              to: group.groupId,
-              messages: [message]
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-                "Content-Type": "application/json"
+          try {
+
+            await axios.post(
+              "https://api.line.me/v2/bot/message/push",
+              {
+                to: groupId,
+                messages: [message]
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                  "Content-Type": "application/json"
+                }
               }
-            }
-          );
+            );
+
+          } catch (err) {
+            console.log("LINE push group error:", err.response?.data || err.message);
+          }
 
         }
 
@@ -417,7 +429,6 @@ cron.schedule("* * * * *", async () => {
   }
 
 });
-
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
