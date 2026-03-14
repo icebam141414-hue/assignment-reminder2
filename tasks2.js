@@ -1,51 +1,51 @@
-```javascript
 document.addEventListener("DOMContentLoaded", () => {
+
   const taskList = document.getElementById("taskList");
+  const notifiedTasks = new Set();
+
 
   // =============================
-  // ดึงงานจาก SERVER
+  // ดึงข้อมูลจาก Server
   // =============================
   async function getTasks() {
     try {
       const res = await fetch("/tasks");
-      return await res.json();
+      const data = await res.json();
+      return data;
     } catch (err) {
-      console.error("❌ ดึงงานไม่ได้", err);
+      console.error("โหลดงานไม่สำเร็จ", err);
       return [];
     }
   }
 
+
   // =============================
-  // ดูสถานะเวลา (สี)
+  // เช็คสีสถานะเวลา
   // =============================
   function getTaskStatus(dueTime) {
+
     if (!dueTime) return "task-green";
 
     const now = new Date();
     const due = new Date(dueTime);
 
-    const diffMs = due - now;
-    const diffHours = diffMs / (1000 * 60 * 60);
+    const diff = due - now;
+    const hours = diff / (1000 * 60 * 60);
 
-    // เลยกำหนด
-    if (diffMs < 0) {
-      return "task-red";
-    }
+    if (diff < 0) return "task-red";
+    if (hours <= 24) return "task-yellow";
 
-    // เหลือไม่เกิน 24 ชั่วโมง
-    if (diffHours <= 24) {
-      return "task-yellow";
-    }
-
-    // ยังอีกนาน
     return "task-green";
   }
 
+
   // =============================
-  // แสดงผล
+  // แสดงรายการงาน
   // =============================
   async function renderTasks() {
+
     const tasks = await getTasks();
+
     taskList.innerHTML = "";
 
     if (!tasks || tasks.length === 0) {
@@ -53,20 +53,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    tasks.forEach((task) => {
-      const div = document.createElement("div");
+    tasks.forEach(task => {
 
-      // รองรับชื่อ field ทั้งสองแบบ
       const subject = task.subject || "ไม่ระบุวิชา";
       const title = task.title || task.task || "ไม่มีรายละเอียด";
       const dueRaw = task.dueDate || task.time;
 
-      const statusClass = getTaskStatus(dueRaw);
-      div.className = `task-card ${statusClass}`;
-
       const dueText = dueRaw
         ? new Date(dueRaw).toLocaleString("th-TH")
         : "ไม่มีวันที่";
+
+      const statusClass = getTaskStatus(dueRaw);
+
+      const div = document.createElement("div");
+      div.className = `task-card ${statusClass}`;
 
       div.innerHTML = `
         <div class="task-info">
@@ -76,51 +76,70 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
 
         <div class="task-actions">
+
           ${
             task.completed
-              ? `<span class="done-label">ส่งแล้ว ✅</span>`
-              : `<button class="done-btn" onclick="completeTask('${task.id}')">
-                   ส่งงานแล้ว
-                 </button>`
+            ? `<span class="done-label">ส่งแล้ว ✅</span>`
+            : `<button class="done-btn" onclick="completeTask('${task.id}')">
+                ส่งงานแล้ว
+              </button>`
           }
-          <button class="edit-btn" onclick="editTask('${task.id}')">แก้ไข</button>
-          <button class="delete-btn" onclick="deleteTask('${task.id}')">ลบ</button>
+
+          <button class="edit-btn" onclick="editTask('${task.id}')">
+            แก้ไข
+          </button>
+
+          <button class="delete-btn" onclick="deleteTask('${task.id}')">
+            ลบ
+          </button>
+
         </div>
       `;
 
       taskList.appendChild(div);
+
     });
+
   }
+
 
   // =============================
   // ส่งงานแล้ว
   // =============================
-  window.completeTask = async function (id) {
+  window.completeTask = async function(id) {
+
     await fetch(`/tasks/${id}/complete`, {
-      method: "PUT",
+      method: "PUT"
     });
+
     renderTasks();
-  };
+  }
+
 
   // =============================
-  // ลบ
+  // ลบงาน
   // =============================
-  window.deleteTask = async function (id) {
+  window.deleteTask = async function(id) {
+
     if (!confirm("ต้องการลบงานนี้ใช่ไหม?")) return;
 
     await fetch(`/tasks/${id}`, {
-      method: "DELETE",
+      method: "DELETE"
     });
 
     renderTasks();
-  };
+  }
+
 
   // =============================
-  // แก้ไข
+  // แก้ไขงาน
   // =============================
-  window.editTask = async function (id) {
+  window.editTask = async function(id) {
+
     const tasks = await getTasks();
-    const task = tasks.find((t) => t.id === id);
+    const task = tasks.find(t => t.id === id);
+
+    if (!task) return;
 
     const subject = task.subject || "";
     const title = task.title || task.task || "";
@@ -134,57 +153,67 @@ document.addEventListener("DOMContentLoaded", () => {
     await fetch(`/tasks/${id}`, {
       method: "PUT",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         subject: newSubject,
-        title: newTitle,
-      }),
+        title: newTitle
+      })
     });
 
     renderTasks();
-  };
-
-  renderTasks();
-});
-
-
-// =============================
-// 🔔 ระบบแจ้งเตือนเมื่อถึงเวลา
-// =============================
-const notifiedTasks = new Set();
-
-async function checkDueTasks() {
-  try {
-    const res = await fetch("/tasks");
-    const tasks = await res.json();
-
-    const now = new Date();
-
-    tasks.forEach((task) => {
-      if (task.completed) return;
-
-      const due = task.dueDate || task.time;
-      if (!due) return;
-
-      const dueDate = new Date(due);
-
-      if (dueDate <= now && !notifiedTasks.has(task.id)) {
-        notifiedTasks.add(task.id);
-
-        alert(`🔔 ถึงเวลาส่งงาน!
-วิชา: ${task.subject}
-งาน: ${task.title || task.task}`);
-      }
-    });
-  } catch (err) {
-    console.error("❌ เช็คเวลาไม่ได้", err);
   }
-}
 
-// เช็คทุก 30 วิ
-setInterval(checkDueTasks, 30000);
 
-// เปิดหน้าเว็บ → เช็คทันที
-checkDueTasks();
-```
+  // =============================
+  // แจ้งเตือนถึงเวลาส่ง
+  // =============================
+  async function checkDueTasks() {
+
+    try {
+
+      const tasks = await getTasks();
+      const now = new Date();
+
+      tasks.forEach(task => {
+
+        if (task.completed) return;
+
+        const due = task.dueDate || task.time;
+        if (!due) return;
+
+        const dueDate = new Date(due);
+
+        if (dueDate <= now && !notifiedTasks.has(task.id)) {
+
+          notifiedTasks.add(task.id);
+
+          alert(
+`🔔 ถึงเวลาส่งงาน!
+
+วิชา: ${task.subject}
+งาน: ${task.title || task.task}`
+          );
+
+        }
+
+      });
+
+    } catch (err) {
+
+      console.error("เช็คเวลาไม่ได้", err);
+
+    }
+
+  }
+
+
+  // =============================
+  // เริ่มระบบ
+  // =============================
+  renderTasks();
+  checkDueTasks();
+
+  setInterval(checkDueTasks, 30000);
+
+});
